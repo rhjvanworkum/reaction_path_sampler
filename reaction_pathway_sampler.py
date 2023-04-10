@@ -144,30 +144,19 @@ class ReactionPathwaySampler:
         self,
         smiles_strings: List[str],
         settings: Dict[str, Any],
-        n_initial_complexes: int = 1
+        n_initial_complexes: int = 1,
     ) -> None:
         self.smiles_strings = smiles_strings
         self.settings = settings
         self.n_initial_complexes = n_initial_complexes
 
-
         self.ade_complex = None
 
     def sample_reaction_complexes(
         self,
+        complex: ade.Species,
         reactive_coordinate: List[int],
-        min: float,
-        max: float,
-        n_points: int
     ) -> List[str]:
-        # 1. create initial complexes & sample conformers
-        # conformers = []
-        t = time.time()
-        complexes = self._sample_initial_complexes()
-        print(f'autode sampling: {time.time() - t}')
-        
-        # for complex in complexes:
-        complex = complexes[0]
         complex = Molecule.from_autode_mol(complex)
         equi_coordinate_value = get_reactive_coordinate_value(complex.to_pybel(), reactive_coordinate)
 
@@ -193,9 +182,9 @@ class ReactionPathwaySampler:
             mode="wide"
         )
         print(f'metadyn sampling: {time.time() - t}')
+        print(f'metadyn sampled n conformers: {len(confs)}')
 
-        print(len(confs))
-
+        # 2. optimize conformers
         t = time.time()
         confs = self._optimize_conformers(
             complex=complex,
@@ -204,14 +193,27 @@ class ReactionPathwaySampler:
             curr_coordinate_val=equi_coordinate_value
         )
         print(f'optimizing conformers: {time.time() - t}')
-        t = time.time()
-        confs = self._prune_conformers(
-            complex=complex,
-            conformers=confs
-        )
-        print(f'pruning conformers: {time.time() - t}')
+
+        # 3. prune conformer set
+        if self.settings['use_pruning']:
+            t = time.time()
+            confs = self._prune_conformers(
+                complex=complex,
+                conformers=confs
+            )
+            print(f'pruning conformers: {time.time() - t}')
+            print(f'conformers after pruning: {len(confs)}\n\n')
+
         return confs
 
+    def sample_trajectories(
+        self,
+        reactive_coordinate: List[int],
+        min: float,
+        max: float,
+        n_points: int
+    ):
+        pass
         # coordinate_interval = np.linspace(min, max, n_points)
         # trajectories = [
         #     self._relaxed_scan(conf, coordinate_interval) for conf in confs
@@ -242,25 +244,32 @@ class ReactionPathwaySampler:
         
         # return trajectories
 
+    def _get_ade_complex(self) -> Complex:
+        if len(self.smiles_strings) == 1:
+            self.ade_complex = ade.Molecule(smiles=self.smiles_strings[0])
+        else:
+            self.ade_complex = Complex(*[ade.Molecule(smiles=smi) for smi in self.smiles_strings])
+        return self.ade_complex
+
     def _sample_initial_complexes(
         self
     ) -> List[Conformer]:
         """
         Sample initial complexes using autodE from the SMILES string
         """
-        if len(self.smiles_strings) == 1:
-            self.ade_complex = ade.Molecule(smiles=self.smiles_strings[0])
-        else:
-            self.ade_complex = Complex(*[ade.Molecule(smiles=smi) for smi in self.smiles_strings])
-
+        self.ade_complex = self._get_ade_complex()
         self.ade_complex._generate_conformers()
         self.ade_complex.conformers.prune_on_rmsd()
 
-        cwd = os.getcwd()
-        os.chdir('/tmp')
-        for conformer in self.ade_complex.conformers:
-            conformer.optimise(method=XTB())
-        os.chdir(cwd)
+        @work_in_tmp_dir(
+            filenames_to_copy=[],
+            kept_file_exts=(),
+        )
+        def optimise_confs(complex):
+            for conformer in complex.conformers:
+                conformer.optimise(method=XTB())
+        
+        optimise_confs(self.ade_complex)
         self.ade_complex.conformers.prune_on_rmsd()
 
         complexes = self.ade_complex.conformers[:self.n_initial_complexes]
@@ -296,9 +305,9 @@ class ReactionPathwaySampler:
             complex.charge,
             complex.mult,
             "metadyn",
-            method="2",
+            method=self.settings['xtb_method'],
             xcontrol_settings=xcontrol_settings,
-            n_cores=2
+            n_cores=self.settings['xtb_n_cores']
         )
         return structures
 
@@ -329,9 +338,9 @@ class ReactionPathwaySampler:
                     complex.charge,
                     complex.mult,
                     "opt",
-                    method="2",
+                    method=self.settings['xtb_method'],
                     xcontrol_settings=xcontrol_settings,
-                    n_cores=2
+                    n_cores=self.settings['xtb_n_cores']
                 )
             )
         opt_conformers = list(filter(lambda x: x is not None, opt_conformers))

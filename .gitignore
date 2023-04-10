@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 
 /scratch
+*.txt
+nul
+run.out
 
 # C extensions
 *.so

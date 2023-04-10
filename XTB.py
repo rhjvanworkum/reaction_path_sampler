@@ -23,11 +23,14 @@ def xtb_driver(
     xcontrol_settings: Optional[str] = None,
     n_cores: int = 4
 ):
+    if mult != 1:
+        print(f'WARNING: multiplicity is {mult}')
+
     flags = [
         "--chrg",
         str(charge),
         "--uhf",
-        str(mult),
+        str(mult - 1),
         "--gfn",
         str(method)
     ]

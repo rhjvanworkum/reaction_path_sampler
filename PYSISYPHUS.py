@@ -1,6 +1,8 @@
 from typing import Union, Literal, List, Any
 import subprocess
 import os
+import numpy as np
+import h5py
 
 from autode.utils import run_in_tmp_environment, work_in_tmp_dir
 
@@ -36,14 +38,19 @@ def construct_tsopt_block() -> str:
 def construct_irc_block() -> str:
     return "irc:\n type: eulerpc\n rms_grad_thresh: 0.0005\n\n"
 
+def construct_endopt_block() -> str:
+    return "endopt: \n\n"
 
 def pysisyphus_driver(
     geometry_files: Any,
     charge: int,
     mult: int,
-    jobs: List[str] = ["cos"],
+    job: Literal["ts_search", "irc"],
     n_cores: int = 2
 ):
+    if mult != 1:
+        print(f'WARNING: multiplicity is {mult}')
+
     settings_string = construct_geometry_block(
         files=[file.split('/')[-1] for file in geometry_files],
         type="cart"
@@ -52,14 +59,15 @@ def pysisyphus_driver(
         charge=charge,
         mult=mult
     )
-    settings_string += construct_opt_block()
 
-    if "cos" in jobs:
+    if job == "ts_search":
+        settings_string += construct_opt_block()
         settings_string += construct_cos_block()
-    if "tsopt" in jobs:
         settings_string += construct_tsopt_block()
-    if "irc" in jobs:
+
+    if job == "irc":
         settings_string += construct_irc_block()
+        settings_string += construct_endopt_block()
 
     @work_in_tmp_dir(
         filenames_to_copy=geometry_files,
@@ -83,8 +91,8 @@ def pysisyphus_driver(
         )
         output = proc.communicate()
         
-        cos_final_traj = None
-        if "cos" in jobs:
+        if job == "ts_search":
+            cos_final_traj = None
             try:
                 file_list = []
                 for _, _, files in os.walk(os.getcwd()):
@@ -96,23 +104,36 @@ def pysisyphus_driver(
             except Exception as e:
                 print(e)
         
-        tsopt, imaginary_mode = None, None
-        if "tsopt" in jobs:
+            tsopt = None
             if os.path.exists('ts_opt.xyz'):
                 with open('ts_opt.xyz', 'r') as f:
-                    tsopt = f.readlines()        
+                    tsopt = f.readlines()
+
+            imaginary_freq = None
+            if os.path.exists('ts_final_hessian.h5'):
+                f = h5py.File('./ts_final_hessian.h5')
+                freqs = f['vibfreqs'][:]
+                imaginary_freq = np.min(freqs)
+
+            return output, cos_final_traj, tsopt, imaginary_freq  
         
-        forward_irc, backward_irc = None, None
-        if "irc" in jobs:
+        elif job == "irc":
+            forward_irc, backward_irc = None, None
+            forward_end, backward_end = None, None
             if os.path.exists('forward_irc.trj'):
                 forward_irc, _ = traj2str('forward_irc.trj')
             if os.path.exists('backward_irc.trj'):
                 backward_irc, _ = traj2str('backward_irc.trj')
+            if os.path.exists('forward_end_opt.xyz'):
+                with open('forward_end_opt.xyz', 'r') as f:
+                    forward_end = f.readlines()   
+            if os.path.exists('backward_end_opt.xyz'):
+                with open('backward_end_opt.xyz', 'r') as f:
+                    backward_end = f.readlines()   
+
+            return output, forward_irc, backward_irc, forward_end, backward_end
         
-        return cos_final_traj, tsopt, forward_irc, backward_irc
-    
-    cos_final_traj, tsopt, forward_irc, backward_irc = execute_pysisyphus()
-    return cos_final_traj, tsopt, forward_irc, backward_irc
+    return execute_pysisyphus()
 
 if __name__ == "__main__":
     out = pysisyphus_driver(
