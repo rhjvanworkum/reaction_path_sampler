@@ -182,6 +182,12 @@ def _check_xyz_file_exists(filename: str) -> None:
 
     return None
 
+def conf_to_xyz_string(conf) -> str:
+    str = f"{len(conf.atoms)}\n \n"
+    for atom in conf.atoms:
+        str += f"{atom.atomic_symbol} {round(atom.coord.x, 4)} {round(atom.coord.y, 4)} {round(atom.coord.z, 4)}\n"
+    return str
+
 def xyz_string_to_autode_atoms(xyz_file: str) -> Atoms:
     """
     From a .xyz file get a list of autode atoms

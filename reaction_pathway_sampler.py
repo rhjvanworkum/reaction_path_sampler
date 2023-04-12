@@ -1,3 +1,4 @@
+from concurrent.futures import ProcessPoolExecutor
 import autode as ade
 from autode.values import Distance
 from autode.species import Complex
@@ -7,6 +8,7 @@ from autode.utils import work_in_tmp_dir
 
 import os
 import time
+from tqdm import tqdm
 from typing import List, Literal, Any, Dict
 import numpy as np
 from openbabel import pybel
@@ -14,13 +16,8 @@ import openbabel as ob
 from CREST import crest_driver
 
 from XTB import xtb_driver
-from utils import Molecule
+from utils import Molecule, conf_to_xyz_string, xyz_string_to_autode_atoms
 from constants import bohr_ang
-
-ade.Config.n_cores = 4
-ade.Config.XTB.path = '/home/ruard/Programs/xtb-6.5.1/bin/xtb'
-ade.Config.rmsd_threshold = Distance(0.5, units="Å")
-
 
 def get_reactive_coordinate_value(
     mol: pybel.Molecule,
@@ -138,6 +135,39 @@ def compute_force_constant(
     return force_constant
 
 
+def optimize_autode_conformer(args):
+    xyz_string, charge, mult, method, xcontrol_settings, cores = args
+    opt_xyz = xtb_driver(
+        xyz_string,
+        charge,
+        mult,
+        "opt",
+        method=method,
+        xcontrol_settings=xcontrol_settings,
+        n_cores=cores
+    )
+    try:
+        return Conformer(
+            atoms=xyz_string_to_autode_atoms(opt_xyz), 
+            charge=charge, 
+            mult=mult
+        )
+    except:
+        return None
+
+
+def optimize_conformer(args):
+    conformer, complex, method, xcontrol_settings, cores = args
+    return xtb_driver(
+        conformer,
+        complex.charge,
+        complex.mult,
+        "opt",
+        method=method,
+        xcontrol_settings=xcontrol_settings,
+        n_cores=cores
+    )
+
 class ReactionPathwaySampler:
 
     def __init__(
@@ -193,6 +223,8 @@ class ReactionPathwaySampler:
             curr_coordinate_val=equi_coordinate_value
         )
         print(f'optimizing conformers: {time.time() - t}')
+
+        # TODO: we can not have changed the mol graph during sampling (but maybe RMSD selecting already filters this out)
 
         # 3. prune conformer set
         if self.settings['use_pruning']:
@@ -261,16 +293,42 @@ class ReactionPathwaySampler:
         self.ade_complex._generate_conformers()
         self.ade_complex.conformers.prune_on_rmsd()
 
-        @work_in_tmp_dir(
-            filenames_to_copy=[],
-            kept_file_exts=(),
-        )
-        def optimise_confs(complex):
-            for conformer in complex.conformers:
-                conformer.optimise(method=XTB())
+        arguments = [
+            (
+                conf_to_xyz_string(conformer), conformer.charge, conformer.mult, 
+                self.settings['xtb_method'], "", self.settings['xtb_n_cores']
+            ) for conformer in self.ade_complex.conformers
+        ]
+        with ProcessPoolExecutor(max_workers=self.settings['n_processes']) as executor:
+            conformers = list(tqdm(executor.map(optimize_autode_conformer, arguments), total=len(arguments), desc="Optimizing init complex conformers"))
         
-        optimise_confs(self.ade_complex)
+        self.ade_complex.conformers = list(filter(lambda x: x != None, conformers))
         self.ade_complex.conformers.prune_on_rmsd()
+
+        print(f'sampled {len(self.ade_complex.conformers)} different complex confomers')
+
+        def sort_complex_conformers_on_distance(
+            conformers: List[Conformer],
+            mols: List[ade.Molecule] 
+        ) -> List[Conformer]:
+            distances = []
+
+            for conformer in conformers:
+                if len(mols) == 2:
+                    centroid_1 = np.mean(np.array([atom.coord for atom in conformer.atoms[:len(mols[0].atoms)]]), axis=0)
+                    centroid_2 = np.mean(np.array([atom.coord for atom in conformer.atoms[len(mols[0].atoms):]]), axis=0)
+                    distances.append(np.linalg.norm(centroid_2 - centroid_1))
+                elif len(mols) == 3:
+                    centroid_1 = np.mean(np.array([atom.coord for atom in conformer.atoms[:len(mols[0].atoms)]]), axis=0)
+                    centroid_2 = np.mean(np.array([atom.coord for atom in conformer.atoms[len(mols[0].atoms):len(mols[0].atoms) + len(mols[1].atoms)]]), axis=0)
+                    centroid_3 = np.mean(np.array([atom.coord for atom in conformer.atoms[len(mols[0].atoms) + len(mols[1].atoms):]]), axis=0)
+                    distances.append(np.linalg.norm(centroid_2 - centroid_1) + np.linalg.norm(centroid_3 - centroid_1) + np.linalg.norm(centroid_3 - centroid_2))
+            return [conformers[i] for i in np.argsort(np.array(distances))]
+
+        complexes = sort_complex_conformers_on_distance(
+            self.ade_complex.conformers,
+            [ade.Molecule(smiles=smi) for smi in self.smiles_strings]
+        )[:self.n_initial_complexes]
 
         complexes = self.ade_complex.conformers[:self.n_initial_complexes]
         return complexes
@@ -307,7 +365,7 @@ class ReactionPathwaySampler:
             "metadyn",
             method=self.settings['xtb_method'],
             xcontrol_settings=xcontrol_settings,
-            n_cores=self.settings['xtb_n_cores']
+            n_cores=self.settings['xtb_n_cores_metadyn']
         )
         return structures
 
@@ -330,19 +388,12 @@ class ReactionPathwaySampler:
             self.settings["wall_radius"]
         )
         
-        opt_conformers = []
-        for conf in conformers:
-            opt_conformers.append(
-                xtb_driver(
-                    conf,
-                    complex.charge,
-                    complex.mult,
-                    "opt",
-                    method=self.settings['xtb_method'],
-                    xcontrol_settings=xcontrol_settings,
-                    n_cores=self.settings['xtb_n_cores']
-                )
-            )
+        arguments = [
+            (conf, complex, self.settings['xtb_method'], xcontrol_settings, self.settings['xtb_n_cores']) for conf in conformers
+        ]
+        with ProcessPoolExecutor(max_workers=self.settings['n_processes']) as executor:
+            opt_conformers = list(tqdm(executor.map(optimize_conformer, arguments), total=len(arguments), desc="Optimizing conformers"))
+
         opt_conformers = list(filter(lambda x: x is not None, opt_conformers))
         return opt_conformers
         
