@@ -136,13 +136,14 @@ def compute_force_constant(
 
 
 def optimize_autode_conformer(args):
-    xyz_string, charge, mult, method, xcontrol_settings, cores = args
+    xyz_string, charge, mult, solvent, method, xcontrol_settings, cores = args
     opt_xyz = xtb_driver(
         xyz_string,
         charge,
         mult,
         "opt",
         method=method,
+        solvent=solvent,
         xcontrol_settings=xcontrol_settings,
         n_cores=cores
     )
@@ -157,13 +158,14 @@ def optimize_autode_conformer(args):
 
 
 def optimize_conformer(args):
-    conformer, complex, method, xcontrol_settings, cores = args
+    conformer, complex, solvent, method, xcontrol_settings, cores = args
     return xtb_driver(
         conformer,
         complex.charge,
         complex.mult,
         "opt",
         method=method,
+        solvent=solvent,
         xcontrol_settings=xcontrol_settings,
         n_cores=cores
     )
@@ -173,10 +175,12 @@ class ReactionPathwaySampler:
     def __init__(
         self,
         smiles_strings: List[str],
+        solvent: str,
         settings: Dict[str, Any],
         n_initial_complexes: int = 1,
     ) -> None:
         self.smiles_strings = smiles_strings
+        self.solvent = solvent
         self.settings = settings
         self.n_initial_complexes = n_initial_complexes
 
@@ -295,7 +299,8 @@ class ReactionPathwaySampler:
 
         arguments = [
             (
-                conf_to_xyz_string(conformer), conformer.charge, conformer.mult, 
+                conf_to_xyz_string(conformer), conformer.charge, conformer.mult,
+                self.solvent, 
                 self.settings['xtb_method'], "", self.settings['xtb_n_cores']
             ) for conformer in self.ade_complex.conformers
         ]
@@ -364,6 +369,7 @@ class ReactionPathwaySampler:
             complex.mult,
             "metadyn",
             method=self.settings['xtb_method'],
+            solvent=self.solvent,
             xcontrol_settings=xcontrol_settings,
             n_cores=self.settings['xtb_n_cores_metadyn']
         )
@@ -389,7 +395,7 @@ class ReactionPathwaySampler:
         )
         
         arguments = [
-            (conf, complex, self.settings['xtb_method'], xcontrol_settings, self.settings['xtb_n_cores']) for conf in conformers
+            (conf, complex, self.solvent, self.settings['xtb_method'], xcontrol_settings, self.settings['xtb_n_cores']) for conf in conformers
         ]
         with ProcessPoolExecutor(max_workers=self.settings['n_processes']) as executor:
             opt_conformers = list(tqdm(executor.map(optimize_conformer, arguments), total=len(arguments), desc="Optimizing conformers"))

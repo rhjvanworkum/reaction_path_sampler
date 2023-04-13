@@ -1,4 +1,4 @@
-from typing import Union, Literal, List, Any
+from typing import Optional, Union, Literal, List, Any
 import subprocess
 import os
 import numpy as np
@@ -22,9 +22,15 @@ def construct_geometry_block(
 
 def construct_calculation_block(
     charge: int, 
-    mult: int
+    mult: int,
+    solvent: Optional[str] = None
 ) -> str:
-    return f"calc:\n type: xtb\n charge: {charge}\n mult: {mult}\n pal: 4\n\n"
+    string = f"calc:\n type: xtb\n charge: {charge}\n mult: {mult}\n pal: 4\n"
+    if solvent is not None:
+        string += f" gbsa: {solvent}\n\n"
+    else:
+        string += "\n"
+    return string
 
 def construct_cos_block() -> str:
     return "cos:\n type: neb\n climb: True\n\n"
@@ -46,7 +52,8 @@ def pysisyphus_driver(
     charge: int,
     mult: int,
     job: Literal["ts_search", "irc"],
-    n_cores: int = 2
+    n_cores: int = 2,
+    solvent: Optional[str] = None
 ):
     if mult != 1:
         print(f'WARNING: multiplicity is {mult}')

@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Callable, Dict, List, Tuple, Any
+from typing import Callable, Dict, List, Optional, Tuple, Any
 import os
 import time
 import yaml
@@ -9,7 +9,6 @@ from geodesic_interpolate.interpolation import redistribute
 from geodesic_interpolate.geodesic import Geodesic
 
 import networkx as nx
-from networkx.algorithms import isomorphism
 
 import autode as ade
 from autode.values import Distance
@@ -18,7 +17,6 @@ from autode.atoms import Atoms
 from autode.input_output import atoms_to_xyz_file
 
 from autode.bond_rearrangement import get_bond_rearrangs
-from autode.mol_graphs import get_mapping
 from autode.mol_graphs import reac_graph_to_prod_graph
 from autode.geom import calc_heavy_atom_rmsd, get_rot_mat_kabsch
 
@@ -52,12 +50,14 @@ def remove_whitespace(
 
 def generate_reactant_product_complexes(
     smiles_strings: List[str],
+    solvent: str,
     reactive_coordinate: List[int],
     settings: Any,
     save_path: str
 ) -> List[Conformer]:
     rps = ReactionPathwaySampler(
         smiles_strings=smiles_strings,
+        solvent=solvent,
         settings=settings,
         n_initial_complexes=settings['n_initial_complexes']
     )
@@ -230,6 +230,7 @@ def main(
     output_dir: str,
     settings_file_path: str,
     n_reactant_product_pairs: int,
+    solvent: str,
     reactant_smiles: List[str],
     rc_rc: List[int],
     product_smiles: List[str],
@@ -248,14 +249,14 @@ def main(
 
 
     # generate rc/pc complexes & reaction isomorphisms
-    rc_complex, rc_conformers = generate_reactant_product_complexes(reactant_smiles, rc_rc, settings, f'{output_dir}/rcs.xyz')
-    pc_complex, pc_conformers = generate_reactant_product_complexes(product_smiles, pc_rc, settings, f'{output_dir}/pcs.xyz')     
+    rc_complex, rc_conformers = generate_reactant_product_complexes(reactant_smiles, solvent, rc_rc, settings, f'{output_dir}/rcs.xyz')
+    pc_complex, pc_conformers = generate_reactant_product_complexes(product_smiles, solvent, pc_rc, settings, f'{output_dir}/pcs.xyz')     
     reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(rc_complex, pc_complex)
 
     # select best reaction isomorphism & remap reaction
     t = time.time()
-    get_reactant_conformers = lambda: generate_reactant_product_complexes(reactant_smiles, rc_rc, settings, f'{output_dir}/rcs.xyz')[1]
-    get_product_conformers = lambda: generate_reactant_product_complexes(product_smiles, pc_rc, settings, f'{output_dir}/pcs.xyz')[1]
+    get_reactant_conformers = lambda: generate_reactant_product_complexes(reactant_smiles, solvent, rc_rc, settings, f'{output_dir}/rcs.xyz')[1]
+    get_product_conformers = lambda: generate_reactant_product_complexes(product_smiles, solvent, pc_rc, settings, f'{output_dir}/pcs.xyz')[1]
 
     isomorphism = select_ideal_isomorphism(
         get_rc_fn=get_reactant_conformers,
@@ -312,7 +313,8 @@ def main(
             geometry_files=[f'{output_dir}/{idx}/geodesic_path.trj'],
             charge=pc_complex.charge,
             mult=pc_complex.mult,
-            job="ts_search"
+            job="ts_search",
+            solvent=solvent
         )
         if os.path.exists(f'{output_dir}/{idx}/geodesic_path.trj'):
             os.remove(f'{output_dir}/{idx}/geodesic_path.trj')
@@ -332,7 +334,8 @@ def main(
                     geometry_files=[f'{output_dir}/{idx}/ts_opt.xyz'],
                     charge=pc_complex.charge,
                     mult=pc_complex.mult,
-                    job="irc"
+                    job="irc",
+                    solvent=solvent
                 )
                 print(f'IRC time: {time.time() - t} \n\n')
                 write_output_file(output, f'{output_dir}/{idx}/irc.out')
@@ -379,7 +382,7 @@ if __name__ == "__main__":
     # TODO: for now complexes must be specified with
     # main substrate first & smaller substrates later
 
-    output_dir = './scratch/da_4'
+    output_dir = './scratch/claissen'
     settings_file_path = './scratch/settings.yaml'
 
     n_reactant_product_pairs = 5
@@ -400,16 +403,23 @@ if __name__ == "__main__":
     # rc_rc = [9, 11, 13, 14]
     # pc_rc = [4, 5, 12, 13]
 
-    reactant_smiles = ["C1=C(C(=O)O)C(Cl)=CO1", "C=CCNO"]
-    product_smiles = ["C(Cl)1=C(C(=O)O)C(O2)CC(CNO)C12"]
-    rc_rc = [13, 12, 17, 18]
-    pc_rc = [9, 8, 16, 17]
+    reactant_smiles = ["c1cccc(OCC=C)c1"]
+    product_smiles = ["C1=CC=CC(CC=C)C1(=O)"]
+    solvent = "Methanol"
+    rc_rc = [5, 6]
+    pc_rc = [7, 9]
+
+    # reactant_smiles = ["C1=C(C(=O)O)C(Cl)=CO1", "C=CCNO"]
+    # product_smiles = ["C(Cl)1=C(C(=O)O)C(O2)CC(CNO)C12"]
+    # rc_rc = [13, 12, 17, 18]
+    # pc_rc = [9, 8, 16, 17]
 
 
     main(
         output_dir,
         settings_file_path,
         n_reactant_product_pairs,
+        solvent,
         reactant_smiles,
         rc_rc,
         product_smiles,
