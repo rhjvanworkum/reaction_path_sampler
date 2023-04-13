@@ -6,6 +6,8 @@ from autode.wrappers.XTB import XTB
 from autode.conformers.conformer import Conformer
 from autode.utils import work_in_tmp_dir
 
+from rdkit import Chem
+
 import os
 import time
 from tqdm import tqdm
@@ -18,6 +20,10 @@ from CREST import crest_driver
 from XTB import xtb_driver
 from utils import Molecule, conf_to_xyz_string, xyz_string_to_autode_atoms
 from constants import bohr_ang
+from xyz2mol import canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
+
+def get_canonical_smiles(smiles: str) -> str:
+    return Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
 
 def get_reactive_coordinate_value(
     mol: pybel.Molecule,
@@ -231,14 +237,14 @@ class ReactionPathwaySampler:
         # TODO: we can not have changed the mol graph during sampling (but maybe RMSD selecting already filters this out)
 
         # 3. prune conformer set
-        if self.settings['use_pruning']:
-            t = time.time()
-            confs = self._prune_conformers(
-                complex=complex,
-                conformers=confs
-            )
-            print(f'pruning conformers: {time.time() - t}')
-            print(f'conformers after pruning: {len(confs)}\n\n')
+        # if self.settings['use_pruning']:
+        t = time.time()
+        confs = self._prune_conformers(
+            complex=complex,
+            conformers=confs
+        )
+        print(f'pruning conformers: {time.time() - t}')
+        print(f'conformers after pruning: {len(confs)}\n\n')
 
         return confs
 
@@ -349,12 +355,12 @@ class ReactionPathwaySampler:
         Sample conformers of a Molecule object complex.
         Returns a list of xyz strings containing conformers
         """
-        xcontrol_settings = get_geometry_constraints(
-            self.settings['force_constant'],
-            reactive_coordinate,
-            curr_coordinate_val
-        )
-        xcontrol_settings += get_wall_constraint(
+        # xcontrol_settings = get_geometry_constraints(
+        #     self.settings['force_constant'],
+        #     reactive_coordinate,
+        #     curr_coordinate_val
+        # )
+        xcontrol_settings = get_wall_constraint(
             self.settings["wall_radius"]
         )
         xcontrol_settings += get_metadynamics_constraint(
@@ -385,12 +391,12 @@ class ReactionPathwaySampler:
         """
         Optimizes a set of conformers
         """
-        xcontrol_settings = get_geometry_constraints(
-            self.settings['force_constant'],
-            reactive_coordinate,
-            curr_coordinate_val
-        )
-        xcontrol_settings += get_wall_constraint(
+        # xcontrol_settings = get_geometry_constraints(
+        #     self.settings['force_constant'],
+        #     reactive_coordinate,
+        #     curr_coordinate_val
+        # )
+        xcontrol_settings = get_wall_constraint(
             self.settings["wall_radius"]
         )
         
@@ -412,15 +418,28 @@ class ReactionPathwaySampler:
         """
         Prunes a set of conformers using CREST CREGEN
         """
-        structures = crest_driver(
-            ref_structure=complex.to_xyz_string(),
-            ensemble_structures='\n'.join(conformers),
-            ref_energy_threshold=self.settings["ref_energy_threshold"],
-            rmsd_threshold=self.settings["rmsd_threshold"],
-            conf_energy_threshold=self.settings["conf_energy_threshold"],
-            rotational_threshold=self.settings["rotational_threshold"],
-        )
-        return structures
+        # structures = crest_driver(
+        #     ref_structure=complex.to_xyz_string(),
+        #     ensemble_structures='\n'.join(conformers),
+        #     ref_energy_threshold=self.settings["ref_energy_threshold"],
+        #     rmsd_threshold=self.settings["rmsd_threshold"],
+        #     conf_energy_threshold=self.settings["conf_energy_threshold"],
+        #     rotational_threshold=self.settings["rotational_threshold"],
+        # )
+        # return structures
+        
+        pruned_conformers = []
+        smiles_list = [get_canonical_smiles(smi) for smi in self.smiles_strings]
+        # TODO: replace charges in a more structured way?
+        smiles_list = [smi if len(smi) > 6 else smi.replace('+', '').replace('-', '')  for smi in smiles_list]
+        for conformer in conformers:
+            conf_smiles_list = get_canonical_smiles_from_xyz_string_ob(conformer)
+            if set(conf_smiles_list) == set(smiles_list):
+                pruned_conformers.append(conformer)
+        
+        return pruned_conformers
+
+
 
     def _relaxed_scan(
         self,

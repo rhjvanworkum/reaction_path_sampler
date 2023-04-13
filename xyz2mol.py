@@ -789,6 +789,16 @@ def canonical_smiles_from_xyz_string(
 
     return smiles_list
 
+def get_canonical_smiles_from_xyz_string_ob(
+    xyz_string: str,
+    ignore_chiral: bool = True
+) -> List[str]:
+    from openbabel import pybel
+    mol = pybel.readstring("xyz", xyz_string)
+    smi = mol.write(format="smi")
+    smi = smi.split()[0].strip()
+    smiles = smi.split('.')
+    return [Chem.MolToSmiles(Chem.MolFromSmiles(smi), isomericSmiles=(not ignore_chiral)) for smi in smiles]
 
 if __name__ == "__main__":
 

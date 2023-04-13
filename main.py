@@ -414,6 +414,10 @@ if __name__ == "__main__":
     # rc_rc = [13, 12, 17, 18]
     # pc_rc = [9, 8, 16, 17]
 
+    # reactant_smiles = ["C1=C(C(=O))C=CO1", "C=CF"]
+    # product_smiles = ["C1=C(C(=O))C(O2)CC(F)C12"]
+    # rc_rc = [11, 12, 13, 16]
+    # pc_rc = [5, 6, 7, 15] 
 
     main(
         output_dir,
