@@ -379,7 +379,7 @@ if __name__ == "__main__":
     # TODO: for now complexes must be specified with
     # main substrate first & smaller substrates later
 
-    output_dir = './scratch/da_4'
+    output_dir = './scratch/sn2_test'
     settings_file_path = './scratch/settings.yaml'
 
     n_reactant_product_pairs = 5
@@ -390,21 +390,20 @@ if __name__ == "__main__":
     # rc_rc = [3, 6]
     # pc_rc = [3, 9]
 
-    # reactant_smiles = ["[O-][N+](=O)CCCl", "[F-]"]
-    # rc_rc = [4, 5]
-    # product_smiles = ["[O-][N+](=O)CCF", "[Cl-]"]
-    # pc_rc = [4, 10]
+    reactant_smiles = ["[O-][N+](=O)CCCl", "[F-]"]
+    rc_rc = [4, 5]
+    product_smiles = ["[O-][N+](=O)CCF", "[Cl-]"]
+    pc_rc = [4, 10]
 
     # reactant_smiles = ["C1=CC=CO1", "C=C"]
     # product_smiles = ["C1=CC(O2)CCC12"]
     # rc_rc = [9, 11, 13, 14]
     # pc_rc = [4, 5, 12, 13]
 
-    reactant_smiles = ["C1=C(C(=O)O)C(Cl)=CO1", "C=CCNO"]
-    product_smiles = ["C(Cl)1=C(C(=O)O)C(O2)CC(CNO)C12"]
-    rc_rc = [13, 12, 17, 18]
-    pc_rc = [9, 8, 16, 17]
-
+    # reactant_smiles = ["C1=C(C(=O))C=CO1", "C=CF"]
+    # product_smiles = ["C1=C(C(=O))C(O2)CC(F)C12"]
+    # rc_rc = [11, 12, 13, 16]
+    # pc_rc = [5, 6, 7, 15] 
 
     main(
         output_dir,
