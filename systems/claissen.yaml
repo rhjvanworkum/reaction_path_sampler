@@ -8,7 +8,7 @@ product_smiles: ["C1=CC=CC(CC=C)C1(=O)"]
 solvent: "Water"
 
 n_initial_complexes: 3
-n_reactant_product_pairs: 5
+max_n_reactant_product_pairs: 5
 n_geodesic_retries: 1
 
 xtb_method: "2"

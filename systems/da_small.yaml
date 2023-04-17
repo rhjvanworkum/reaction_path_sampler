@@ -8,7 +8,7 @@ product_smiles: ["C1=CC(O2)CCC12"]
 solvent: "Methanol"
 
 n_initial_complexes: 1
-n_reactant_product_pairs: 5
+max_n_reactant_product_pairs: 5
 n_geodesic_retries: 1
 
 xtb_method: "2"
