@@ -3,6 +3,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Any
 import os
 import time
 import yaml
+import argparse
 
 from geodesic_interpolate.fileio import write_xyz
 from geodesic_interpolate.interpolation import redistribute
@@ -16,14 +17,20 @@ from autode.conformers.conformer import Conformer
 from autode.atoms import Atoms
 from autode.input_output import atoms_to_xyz_file
 
-from autode.bond_rearrangement import get_bond_rearrangs
+from autode.bond_rearrangement import get_bond_rearrangs, BondRearrangement
 from autode.mol_graphs import reac_graph_to_prod_graph
 from autode.geom import calc_heavy_atom_rmsd, get_rot_mat_kabsch
+from autode.mol_graphs import (
+    get_mapping_ts_template,
+    get_truncated_active_mol_graph,
+)
 
-from PYSISYPHUS import pysisyphus_driver
-from reaction_pathway_sampler import ReactionPathwaySampler
-from utils import traj2str, xyz_string_to_autode_atoms
-from xyz2mol import canonical_smiles_from_xyz_string
+from src.ts_template import TStemplate
+from src.interfaces.PYSISYPHUS import pysisyphus_driver
+from src.molecule import read_xyz_string
+from src.reactive_complex_sampler import ReactiveComplexSampler
+from src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
+from src.xyz2mol import get_canonical_smiles_from_xyz_string_ob
 
 def set_autode_settings(settings):
     ade.Config.n_cores = settings['xtb_n_cores']
@@ -32,39 +39,22 @@ def set_autode_settings(settings):
     ade.Config.num_complex_sphere_points = 10
     ade.Config.num_complex_random_rotations = 10
 
-def remove_whitespace(
-    _lines: List[str]
-) -> str:
-    lines = []
-    for line in _lines:
-        lines += list(filter(lambda x: len(x) > 0, line.split('\n')))
-
-    for i in range(len(lines)):
-        j = 0
-        while j < len(lines[i]) and lines[i][j].isspace():
-            j += 1
-        lines[i] = lines[i][j:]
-    output_text = '\n'.join(lines)
-    return output_text
-
-
 def generate_reactant_product_complexes(
     smiles_strings: List[str],
     solvent: str,
-    reactive_coordinate: List[int],
     settings: Any,
     save_path: str
 ) -> List[Conformer]:
-    rps = ReactionPathwaySampler(
+    rps = ReactiveComplexSampler(
         smiles_strings=smiles_strings,
         solvent=solvent,
-        settings=settings,
-        n_initial_complexes=settings['n_initial_complexes']
+        settings=settings
     )
 
+    complex = rps._get_ade_complex()
+
     if os.path.exists(save_path):
-        complex = rps._get_ade_complex()
-        conformers, _ = traj2str(save_path)
+        conformers, _ = read_trajectory_file(save_path)
         conformer_list = [Conformer(
             atoms=xyz_string_to_autode_atoms(structure), 
             charge=complex.charge, 
@@ -79,10 +69,7 @@ def generate_reactant_product_complexes(
         conformer_list = []
         conformer_xyz_list = []
         for complex in complexes:
-            conformers = rps.sample_reaction_complexes(
-                complex=complex,
-                reactive_coordinate=reactive_coordinate,
-            )
+            conformers = rps.sample_reaction_complexes(complex=complex)
             for conformer in conformers:
                 conformer_xyz_list.append(conformer)
                 conformer_list.append(Conformer(
@@ -92,15 +79,14 @@ def generate_reactant_product_complexes(
                 ))
 
         with open(save_path, 'w') as f:
-            f.writelines(remove_whitespace(conformer_xyz_list))
+            f.writelines(remove_whitespaces_from_xyz_strings(conformer_xyz_list))
 
     return complex, conformer_list
-
 
 def get_reaction_isomorphisms(
     rc_complex: ade.Species,
     pc_complex: ade.Species,
-) -> None:
+) -> Tuple[BondRearrangement, Dict[int, int], int]:
     for idx, reaction_complexes in enumerate([
         [rc_complex, pc_complex],
         [pc_complex, rc_complex],
@@ -119,7 +105,7 @@ def get_reaction_isomorphisms(
                     mappings.append(isomorphism)
 
                 if len(mappings) > 0:
-                    return mappings, idx
+                    return bond_rearr, mappings, idx
 
 def select_closest_reactant_product_pairs(
     n_reactant_product_pairs: int,
@@ -132,7 +118,6 @@ def select_closest_reactant_product_pairs(
         for j in range(len(pc_conformers)):
             indices.append((i, j))
             rmsds.append(np.sqrt(np.mean((pc_conformers[j].coordinates - rc_conformers[i].coordinates)**2)))
-            # rmsds.append(calc_heavy_atom_rmsd(pc_conformers[j].atoms, rc_conformers[i].atoms)) 
     
     indices = np.array(indices)
     rmsds = np.array(rmsds)
@@ -164,7 +149,6 @@ def compute_optimal_coordinates(
     fitted_coords = np.dot(rot_mat, p_mat.T).T
     return fitted_coords
 
-
 def interpolate_geodesic(
     symbols: List[str],
     rc_coordinates: np.ndarray,
@@ -185,7 +169,6 @@ def write_output_file(variable, name):
     if variable is not None:
         with open(name, 'w') as f:
             f.writelines(variable)
-
 
 def remap_conformer(
     conformer: Conformer, 
@@ -226,37 +209,28 @@ def select_ideal_isomorphism(
     return isomorphisms[np.argmin(scores)]
 
 
-def main(
-    output_dir: str,
-    settings_file_path: str,
-    n_reactant_product_pairs: int,
-    solvent: str,
-    reactant_smiles: List[str],
-    rc_rc: List[int],
-    product_smiles: List[str],
-    pc_rc: List[int],
-):
+def main(settings: Dict[str, Any]) -> None:
+    output_dir = settings["output_dir"]
+    reactant_smiles = settings["reactant_smiles"]
+    product_smiles = settings["product_smiles"]
+    solvent = settings["solvent"]
+
     # create output dir
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # open yaml settings
-    with open(settings_file_path, "r") as f:
-        settings = yaml.load(f, Loader=yaml.Loader)
-
     # set autode settings
     set_autode_settings(settings)
 
-
     # generate rc/pc complexes & reaction isomorphisms
-    rc_complex, rc_conformers = generate_reactant_product_complexes(reactant_smiles, solvent, rc_rc, settings, f'{output_dir}/rcs.xyz')
-    pc_complex, pc_conformers = generate_reactant_product_complexes(product_smiles, solvent, pc_rc, settings, f'{output_dir}/pcs.xyz')     
-    reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(rc_complex, pc_complex)
+    rc_complex, rc_conformers = generate_reactant_product_complexes(reactant_smiles, solvent, settings, f'{output_dir}/rcs.xyz')
+    pc_complex, pc_conformers = generate_reactant_product_complexes(product_smiles, solvent, settings, f'{output_dir}/pcs.xyz')     
+    bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(rc_complex, pc_complex)
 
     # select best reaction isomorphism & remap reaction
     t = time.time()
-    get_reactant_conformers = lambda: generate_reactant_product_complexes(reactant_smiles, solvent, rc_rc, settings, f'{output_dir}/rcs.xyz')[1]
-    get_product_conformers = lambda: generate_reactant_product_complexes(product_smiles, solvent, pc_rc, settings, f'{output_dir}/pcs.xyz')[1]
+    get_reactant_conformers = lambda: generate_reactant_product_complexes(reactant_smiles, solvent, settings, f'{output_dir}/rcs.xyz')[1]
+    get_product_conformers = lambda: generate_reactant_product_complexes(product_smiles, solvent, settings, f'{output_dir}/pcs.xyz')[1]
 
     isomorphism = select_ideal_isomorphism(
         get_rc_fn=get_reactant_conformers,
@@ -273,9 +247,9 @@ def main(
     # select closest pairs of reactants & products
     t = time.time()
     closest_pairs = select_closest_reactant_product_pairs(
-        n_reactant_product_pairs,
-        rc_conformers,
-        pc_conformers
+        n_reactant_product_pairs=settings["n_reactant_product_pairs"],
+        rc_conformers=rc_conformers,
+        pc_conformers=pc_conformers
     )
     print(f'comparing RMSDs: {time.time() - t}\n\n')
 
@@ -283,6 +257,8 @@ def main(
     for idx, opt_idx in enumerate(closest_pairs):
         if not os.path.exists(f'{output_dir}/{idx}'):
             os.makedirs(f'{output_dir}/{idx}/')
+
+        print(f'Working on Reactant-Complex pair {idx}')
 
         # 1. Optimally align the 2 conformers using kabsh algorithm
         t = time.time()
@@ -346,12 +322,33 @@ def main(
                     
                     if None not in [backward_end, forward_end]:
                         write_output_file(backward_end + ["\n"] + tsopt + ["\n"] + forward_end, f'{output_dir}/{idx}/reaction.xyz')
-                        
+
                         try:
-                            rc_smiles = canonical_smiles_from_xyz_string("\n".join(backward_end), rc_complex.charge)
-                            pc_smiles = canonical_smiles_from_xyz_string("\n".join(forward_end), pc_complex.charge)
+                            rc_smiles = get_canonical_smiles_from_xyz_string_ob("".join(backward_end))
+                            pc_smiles = get_canonical_smiles_from_xyz_string_ob("".join(forward_end))
                             print(reactant_smiles, rc_smiles)
                             print(product_smiles, pc_smiles)
+
+                            # save as a template here
+                            base_complex = [rc_complex, pc_complex][isomorphism_idx].copy()
+                            coords = np.array([
+                                [a.x, a.y, a.z] for a in read_xyz_string(tsopt)
+                            ])
+                            base_complex.coordinates = coords
+
+                            for bond in bond_rearr.all:
+                                base_complex.graph.add_active_edge(*bond)
+                            truncated_graph = get_truncated_active_mol_graph(graph=base_complex.graph, active_bonds=bond_rearr.all)
+                            # bonds
+                            for bond in bond_rearr.all:
+                                truncated_graph.edges[bond]["distance"] = base_complex.distance(*bond)
+                            # cartesians
+                            nx.set_node_attributes(truncated_graph, {node: base_complex.coordinates[node] for idx, node in enumerate(truncated_graph.nodes)}, 'cartesian')
+
+                            ts_template = TStemplate(truncated_graph, species=base_complex)
+                            ts_template.save(folder_path=f'{output_dir}/{idx}/')
+                            # ts_template.save(folder_path='./templates/')
+
                             print('\n\n')
 
                         except Exception as e:
@@ -378,54 +375,20 @@ def main(
         os.remove('run.out')
         
 
+
+# TODO: for now complexes must be specified with
+# main substrate first & smaller substrates later
 if __name__ == "__main__":    
-    # TODO: for now complexes must be specified with
-    # main substrate first & smaller substrates later
-
-    output_dir = './scratch/claissen'
-    settings_file_path = './scratch/settings.yaml'
-
-    n_reactant_product_pairs = 5
-    n_geodesic_retries = 3
-    
-    # reactant_smiles = ["[O-][N+](=O)CCCl", "[F-]"]
-    # product_smiles = ["[O-][N+](=O)C=C", "F", "[Cl-]"]
-    # rc_rc = [3, 6]
-    # pc_rc = [3, 9]
-
-    # reactant_smiles = ["[O-][N+](=O)CCCl", "[F-]"]
-    # rc_rc = [4, 5]
-    # product_smiles = ["[O-][N+](=O)CCF", "[Cl-]"]
-    # pc_rc = [4, 10]
-
-    # reactant_smiles = ["C1=CC=CO1", "C=C"]
-    # product_smiles = ["C1=CC(O2)CCC12"]
-    # rc_rc = [9, 11, 13, 14]
-    # pc_rc = [4, 5, 12, 13]
-
-    reactant_smiles = ["c1cccc(OCC=C)c1"]
-    product_smiles = ["C1=CC=CC(CC=C)C1(=O)"]
-    solvent = "Methanol"
-    rc_rc = [5, 6]
-    pc_rc = [7, 9]
-
-    # reactant_smiles = ["C1=C(C(=O)O)C(Cl)=CO1", "C=CCNO"]
-    # product_smiles = ["C(Cl)1=C(C(=O)O)C(O2)CC(CNO)C12"]
-    # rc_rc = [13, 12, 17, 18]
-    # pc_rc = [9, 8, 16, 17]
-
-    # reactant_smiles = ["C1=C(C(=O))C=CO1", "C=CF"]
-    # product_smiles = ["C1=C(C(=O))C(O2)CC(F)C12"]
-    # rc_rc = [11, 12, 13, 16]
-    # pc_rc = [5, 6, 7, 15] 
-
-    main(
-        output_dir,
-        settings_file_path,
-        n_reactant_product_pairs,
-        solvent,
-        reactant_smiles,
-        rc_rc,
-        product_smiles,
-        pc_rc
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "settings_file_path",
+        help="Path to file containing the settings",
+        type=str
     )
+    args = parser.parse_args()
+
+    # open yaml settings
+    with open(args.settings_file_path, "r") as f:
+        settings = yaml.load(f, Loader=yaml.Loader)
+
+    main(settings)

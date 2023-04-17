@@ -2,4 +2,4 @@
 
 source env.sh
 
-python main.py
+python main.py scratch/da_large.yaml
