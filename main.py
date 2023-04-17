@@ -4,6 +4,7 @@ import os
 import time
 import yaml
 import argparse
+import shutil
 
 from geodesic_interpolate.fileio import write_xyz
 from geodesic_interpolate.interpolation import redistribute
@@ -29,7 +30,7 @@ from src.ts_template import TStemplate
 from src.interfaces.PYSISYPHUS import pysisyphus_driver
 from src.molecule import read_xyz_string
 from src.reactive_complex_sampler import ReactiveComplexSampler
-from src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
+from src.utils import get_canonical_smiles, read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 from src.xyz2mol import get_canonical_smiles_from_xyz_string_ob
 
 def set_autode_settings(settings):
@@ -247,7 +248,7 @@ def main(settings: Dict[str, Any]) -> None:
     # select closest pairs of reactants & products
     t = time.time()
     closest_pairs = select_closest_reactant_product_pairs(
-        n_reactant_product_pairs=settings["n_reactant_product_pairs"],
+        n_reactant_product_pairs=settings["max_n_reactant_product_pairs"],
         rc_conformers=rc_conformers,
         pc_conformers=pc_conformers
     )
@@ -324,34 +325,53 @@ def main(settings: Dict[str, Any]) -> None:
                         write_output_file(backward_end + ["\n"] + tsopt + ["\n"] + forward_end, f'{output_dir}/{idx}/reaction.xyz')
 
                         try:
-                            rc_smiles = get_canonical_smiles_from_xyz_string_ob("".join(backward_end))
-                            pc_smiles = get_canonical_smiles_from_xyz_string_ob("".join(forward_end))
-                            print(reactant_smiles, rc_smiles)
-                            print(product_smiles, pc_smiles)
+                            original_rc_smiles_list = [get_canonical_smiles(smi) for smi in reactant_smiles]
+                            original_pc_smiles_list = [get_canonical_smiles(smi) for smi in product_smiles]
+                            predicted_rc_smiles_list = get_canonical_smiles_from_xyz_string_ob("".join(backward_end))
+                            predicted_pc_smiles_list = get_canonical_smiles_from_xyz_string_ob("".join(forward_end))
+                            
+                            for list in [
+                                original_rc_smiles_list,
+                                original_pc_smiles_list,
+                                predicted_rc_smiles_list,
+                                predicted_pc_smiles_list
+                            ]:
+                                list.sort()
 
-                            # save as a template here
-                            base_complex = [rc_complex, pc_complex][1 - isomorphism_idx].copy()
-                            coords = np.array([
-                                [a.x, a.y, a.z] for a in read_xyz_string(tsopt)
-                            ])
-                            base_complex.coordinates = coords
-
-                            for bond in bond_rearr.all:
-                                base_complex.graph.add_active_edge(*bond)
-                            truncated_graph = get_truncated_active_mol_graph(graph=base_complex.graph, active_bonds=bond_rearr.all)
-                            # bonds
-                            for bond in bond_rearr.all:
-                                truncated_graph.edges[bond]["distance"] = base_complex.distance(*bond)
-                            # cartesians
-                            nx.set_node_attributes(truncated_graph, {node: base_complex.coordinates[node] for idx, node in enumerate(truncated_graph.nodes)}, 'cartesian')
-
-                            ts_template = TStemplate(truncated_graph, species=base_complex)
-                            ts_template.save(folder_path=f'{output_dir}/{idx}/')
-                            # ts_template.save(folder_path='./templates/')
-
+                            print(original_rc_smiles_list, predicted_rc_smiles_list)
+                            print(original_pc_smiles_list, predicted_pc_smiles_list)
                             print('\n\n')
 
+                            if (original_rc_smiles_list == predicted_rc_smiles_list and original_pc_smiles_list == predicted_pc_smiles_list) or (original_rc_smiles_list == predicted_pc_smiles_list and original_pc_smiles_list == predicted_rc_smiles_list):
+                                # save as a template here
+                                base_complex = [rc_complex, pc_complex][1 - isomorphism_idx].copy()
+                                coords = np.array([
+                                    [a.x, a.y, a.z] for a in read_xyz_string(tsopt)
+                                ])
+                                base_complex.coordinates = coords
+
+                                for bond in bond_rearr.all:
+                                    base_complex.graph.add_active_edge(*bond)
+                                truncated_graph = get_truncated_active_mol_graph(graph=base_complex.graph, active_bonds=bond_rearr.all)
+                                # bonds
+                                for bond in bond_rearr.all:
+                                    truncated_graph.edges[bond]["distance"] = base_complex.distance(*bond)
+                                # cartesians
+                                nx.set_node_attributes(truncated_graph, {node: base_complex.coordinates[node] for idx, node in enumerate(truncated_graph.nodes)}, 'cartesian')
+
+                                ts_template = TStemplate(truncated_graph, species=base_complex)
+                                ts_template.save(folder_path=f'{output_dir}/')
+
+                                # also save tsopt + reaction + irc path
+                                shutil.copy2(f'{output_dir}/{idx}/ts_opt.xyz', f'{output_dir}/ts_opt.xyz')
+                                shutil.copy2(f'{output_dir}/{idx}/reaction.xyz', f'{output_dir}/reaction.xyz')
+                                shutil.copy2(f'{output_dir}/{idx}/irc_path.xyz', f'{output_dir}/irc_path.xyz')
+                                
+                                print('finshed reaction \n\n')
+                                break
+
                         except Exception as e:
+                            print(e)
                             print('Failed to retrieve SMILES from IRC ends \n\n')
 
                     else:
