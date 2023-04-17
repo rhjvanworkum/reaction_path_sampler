@@ -1,0 +1,71 @@
+###
+### 1. GENERAL SETTINGS
+###
+
+output_dir: './scratch/da_mid_test'
+reactant_smiles: ["C1=C(N)C=CO1", "C=CF"]
+product_smiles: ["C1=C(N)C(O2)CC(F)C12"]
+solvent: "Methanol"
+
+n_initial_complexes: 3
+n_reactant_product_pairs: 5
+n_geodesic_retries: 1
+
+xtb_method: "2"
+xtb_n_cores: 2
+xtb_n_cores_metadyn: 2
+n_processes: 32
+
+
+###
+### 2. CONFORMER SAMPLING SETTINGS
+###
+
+use_cregen_pruning: False
+
+# MD settings
+md_settings: {
+  "shake": 2,
+  "step": 5,
+  "dump": 100
+}
+md_time_per_atom: 0.5
+
+# metadyn settings
+metadyn_settings: {
+  'save': 30,
+  'kpush': 0.200, 
+  'alp': 0.800
+}
+
+# constraints
+force_constant: 1.0
+
+# wall
+cavity_scale: 1.0
+cavity_offset: 4.0
+
+# CREGEN settings
+ref_energy_threshold: 6.0
+rmsd_threshold: 0.4
+conf_energy_threshold: 1.0 
+rotational_threshold: 2.0
+
+
+### 
+### 3. GEODESIC INTERPOLATION SETTINGS
+###
+
+nimages: 20
+tol: 1.0e-2
+scaling: 1.7
+dist_cutoff: 3
+friction: 1.0e-2
+maxiter: 15
+
+
+### 
+### 4. TS optimization
+###
+
+min_ts_imaginary_freq: -300

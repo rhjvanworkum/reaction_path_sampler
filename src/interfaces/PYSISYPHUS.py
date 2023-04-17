@@ -1,4 +1,7 @@
-from typing import Union, Literal, List, Any
+"""
+File containing interface to Pysisyphus module
+"""
+from typing import Optional, Union, Literal, List, Any
 import subprocess
 import os
 import numpy as np
@@ -6,7 +9,8 @@ import h5py
 
 from autode.utils import run_in_tmp_environment, work_in_tmp_dir
 
-from utils import traj2str
+from src.utils import read_trajectory_file
+
 
 def construct_geometry_block(
     files: Union[str, List[str]],
@@ -22,9 +26,15 @@ def construct_geometry_block(
 
 def construct_calculation_block(
     charge: int, 
-    mult: int
+    mult: int,
+    solvent: Optional[str] = None
 ) -> str:
-    return f"calc:\n type: xtb\n charge: {charge}\n mult: {mult}\n pal: 4\n\n"
+    string = f"calc:\n type: xtb\n charge: {charge}\n mult: {mult}\n pal: 4\n"
+    if solvent is not None:
+        string += f" gbsa: {solvent}\n\n"
+    else:
+        string += "\n"
+    return string
 
 def construct_cos_block() -> str:
     return "cos:\n type: neb\n climb: True\n\n"
@@ -41,12 +51,14 @@ def construct_irc_block() -> str:
 def construct_endopt_block() -> str:
     return "endopt: \n\n"
 
+
 def pysisyphus_driver(
     geometry_files: Any,
     charge: int,
     mult: int,
     job: Literal["ts_opt", "ts_search", "irc"],
-    n_cores: int = 2
+    n_cores: int = 2,
+    solvent: Optional[str] = None
 ):
     if mult != 1:
         print(f'WARNING: multiplicity is {mult}')
@@ -57,7 +69,8 @@ def pysisyphus_driver(
     )
     settings_string += construct_calculation_block(
         charge=charge,
-        mult=mult
+        mult=mult,
+        solvent=solvent
     )
 
     if job == "ts_opt":
@@ -117,7 +130,7 @@ def pysisyphus_driver(
                         file_list.append(file)
                 cycle_files = list(filter(lambda x: 'cycle_' in x, file_list))
                 file = cycle_files[max([int(file.split('_')[-1].split('.')[0]) for file in cycle_files])]
-                cos_final_traj, _ = traj2str(file)
+                cos_final_traj, _ = read_trajectory_file(file)
             except Exception as e:
                 print(e)
         
@@ -138,9 +151,9 @@ def pysisyphus_driver(
             forward_irc, backward_irc = None, None
             forward_end, backward_end = None, None
             if os.path.exists('forward_irc.trj'):
-                forward_irc, _ = traj2str('forward_irc.trj')
+                forward_irc, _ = read_trajectory_file('forward_irc.trj')
             if os.path.exists('backward_irc.trj'):
-                backward_irc, _ = traj2str('backward_irc.trj')
+                backward_irc, _ = read_trajectory_file('backward_irc.trj')
             if os.path.exists('forward_end_opt.xyz'):
                 with open('forward_end_opt.xyz', 'r') as f:
                     forward_end = f.readlines()   

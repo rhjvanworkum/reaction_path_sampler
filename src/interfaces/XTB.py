@@ -1,16 +1,14 @@
+"""
+File containing interface to XTB
+"""
 import os
 import subprocess
 from typing import Any, Dict, List, Literal, Optional
 import time
 
-
 from autode.utils import run_in_tmp_environment, work_in_tmp_dir
-from utils import Atom, Molecule, read_xyz_file, traj2str
 
-def run_xtb(args):
-    (molecule, keywords, conformer_idx, method, solvent, xcontrol_file) = args
-    return xtb_driver(molecule, keywords, conformer_idx, method, solvent, xcontrol_file)
-
+from src.utils import read_trajectory_file
 
 
 def xtb_driver(
@@ -86,15 +84,16 @@ def xtb_driver(
 
         opt_structure = None
         if job == "opt" and os.path.exists('xtbopt.xyz'):
-            opt_structure = traj2str('xtbopt.xyz')[0][0]
+            opt_structures, _ = read_trajectory_file('xtbopt.xyz')
+            opt_structure = opt_structures[0]
 
         md_structures, md_energies = None, None
         if job == "metadyn" and os.path.exists('xtb.trj'):
-            md_structures, md_energies = traj2str("xtb.trj")
+            md_structures, md_energies = read_trajectory_file("xtb.trj")
 
         scan_structures, scan_energies = None, None
         if job == "scan" and os.path.exists('xtbscan.log'):
-            scan_structures, scan_energies  = traj2str("xtbscan.log")
+            scan_structures, scan_energies  = read_trajectory_file("xtbscan.log")
    
         return energy, opt_structure, md_structures, md_energies, scan_structures, scan_energies
     

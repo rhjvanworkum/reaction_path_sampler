@@ -1,9 +1,12 @@
+"""
+File containing interface to CREST program
+"""
 import os
 import subprocess
 
 from autode.utils import run_in_tmp_environment, work_in_tmp_dir
 
-from utils import traj2str
+from src.utils import read_trajectory_file
 
 
 def crest_driver(
@@ -46,7 +49,7 @@ def crest_driver(
         output = proc.communicate()[0]
 
         if os.path.exists('crest_ensemble.xyz'):
-            structures, energies = traj2str("crest_ensemble.xyz")
+            structures, energies = read_trajectory_file("crest_ensemble.xyz")
 
         return structures
     
