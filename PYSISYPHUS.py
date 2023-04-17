@@ -45,7 +45,7 @@ def pysisyphus_driver(
     geometry_files: Any,
     charge: int,
     mult: int,
-    job: Literal["ts_search", "irc"],
+    job: Literal["ts_opt", "ts_search", "irc"],
     n_cores: int = 2
 ):
     if mult != 1:
@@ -59,6 +59,9 @@ def pysisyphus_driver(
         charge=charge,
         mult=mult
     )
+
+    if job == "ts_opt":
+        settings_string += construct_tsopt_block()
 
     if job == "ts_search":
         settings_string += construct_opt_block()
@@ -91,6 +94,20 @@ def pysisyphus_driver(
         )
         output = proc.communicate()
         
+        if job == "ts_opt":
+            tsopt = None
+            if os.path.exists('ts_opt.xyz'):
+                with open('ts_opt.xyz', 'r') as f:
+                    tsopt = f.readlines()
+
+            imaginary_freq = None
+            if os.path.exists('ts_final_hessian.h5'):
+                f = h5py.File('./ts_final_hessian.h5')
+                freqs = f['vibfreqs'][:]
+                imaginary_freq = np.min(freqs)
+
+            return output, tsopt, imaginary_freq
+
         if job == "ts_search":
             cos_final_traj = None
             try:
