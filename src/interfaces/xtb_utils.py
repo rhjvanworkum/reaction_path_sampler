@@ -33,8 +33,8 @@ def get_wall_constraint(
     wall_radius: float
 ):
     string = "$wall\n"
-    string += "  potential=logfermi"
-    string += "  sphere:%f, all" % wall_radius
+    string += "  potential=logfermi\n"
+    string += "  sphere:%f, all\n" % wall_radius
     return string
 
 def get_metadynamics_constraint(
