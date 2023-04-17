@@ -330,7 +330,7 @@ def main(settings: Dict[str, Any]) -> None:
                             print(product_smiles, pc_smiles)
 
                             # save as a template here
-                            base_complex = [rc_complex, pc_complex][isomorphism_idx].copy()
+                            base_complex = [rc_complex, pc_complex][1 - isomorphism_idx].copy()
                             coords = np.array([
                                 [a.x, a.y, a.z] for a in read_xyz_string(tsopt)
                             ])

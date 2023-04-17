@@ -2,7 +2,7 @@
 ### 1. GENERAL SETTINGS
 ###
 
-output_dir: './scratch/da_small_test'
+output_dir: './scratch/da_small_test_test'
 reactant_smiles: ["C1=CC=CO1", "C=C"]
 product_smiles: ["C1=CC(O2)CCC12"]
 solvent: "Methanol"
@@ -14,7 +14,7 @@ n_geodesic_retries: 1
 xtb_method: "2"
 xtb_n_cores: 2
 xtb_n_cores_metadyn: 2
-n_processes: 32
+n_processes: 8
 
 
 ###
