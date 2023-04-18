@@ -1,3 +1,4 @@
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 from typing import Callable, Dict, List, Optional, Tuple, Any
 import os
@@ -5,6 +6,7 @@ import time
 import yaml
 import argparse
 import shutil
+from tqdm import tqdm
 
 from geodesic_interpolate.fileio import write_xyz
 from geodesic_interpolate.interpolation import redistribute
@@ -105,6 +107,9 @@ def get_reaction_isomorphisms(
                 ):
                     mappings.append(isomorphism)
 
+                if len(mappings) > 250:
+                    mappings = mappings[:250]
+
                 if len(mappings) > 0:
                     return bond_rearr, mappings, idx
 
@@ -182,30 +187,40 @@ def remap_conformer(
         [conformer._coordinates[i] for i in sorted(mapping, key=mapping.get)]
     )
 
+def compute_isomorphism_score(args) -> float:
+    isomorphism, coords1, conformers = args
+    coords2 = np.stack([
+        np.array(
+            [conf.coordinates[i] for i in sorted(isomorphism, key=isomorphism.get)]
+        )
+    ] for conf in conformers)
+    
+    score = (coords2[np.newaxis, :, :] - coords1[:, np.newaxis, :])**2
+    return np.mean(np.sqrt(np.mean(score, axis=-1)))
+
 def select_ideal_isomorphism(
-    get_rc_fn: Callable,
-    get_pc_fn: Callable,
+    rc_conformers: List[Conformer],
+    pc_conformers: List[Conformer],
     isomorphism_idx: int,
-    isomorphisms: List[Dict[int, int]]
+    isomorphisms: List[Dict[int, int]],
+    settings: Any
 ) -> Dict[int, int]:
     scores = []
-    for isomorphism in isomorphisms:
-        rc_conformers = get_rc_fn()
-        pc_conformers = get_pc_fn()
 
-        if isomorphism_idx == 0:
-            for conformer in rc_conformers:
-                remap_conformer(conformer, isomorphism)
-        elif isomorphism_idx == 1:
-            for conformer in pc_conformers:
-                remap_conformer(conformer, isomorphism)
-        else:
-            raise ValueError(f"isomorphism idx can not be {isomorphism_idx}")
-    
-        rc_coords = np.stack([conf.coordinates for conf in rc_conformers])
-        pc_coords = np.stack([conf.coordinates for conf in pc_conformers])
-        score = (pc_coords[np.newaxis, :, :] - rc_coords[:, np.newaxis, :])**2
-        scores.append(np.mean(np.sqrt(np.mean(score, axis=-1))))
+    if isomorphism_idx == 0:
+        coords_no_remap = np.stack([conf.coordinates for conf in pc_conformers])
+        conformers_to_remap = rc_conformers
+    elif isomorphism_idx == 1:
+        coords_no_remap = np.stack([conf.coordinates for conf in rc_conformers])
+        conformers_to_remap = pc_conformers
+    else:
+        raise ValueError(f"isomorphism idx can not be {isomorphism_idx}")
+
+    args = [
+        (isomorphism, coords_no_remap, conformers_to_remap) for isomorphism in isomorphisms
+    ]
+    with ProcessPoolExecutor(max_workers=int(settings['n_processes'] * settings['xtb_n_cores'])) as executor:
+        scores = list(tqdm(executor.map(compute_isomorphism_score, args), total=len(args), desc="Computing isomorphisms score"))
 
     return isomorphisms[np.argmin(scores)]
 
@@ -230,14 +245,14 @@ def main(settings: Dict[str, Any]) -> None:
 
     # select best reaction isomorphism & remap reaction
     t = time.time()
-    get_reactant_conformers = lambda: generate_reactant_product_complexes(reactant_smiles, solvent, settings, f'{output_dir}/rcs.xyz')[1]
-    get_product_conformers = lambda: generate_reactant_product_complexes(product_smiles, solvent, settings, f'{output_dir}/pcs.xyz')[1]
-
+    print(len(reaction_isomorphisms))
+    print('selecting ideal reaction isomorphism')
     isomorphism = select_ideal_isomorphism(
-        get_rc_fn=get_reactant_conformers,
-        get_pc_fn=get_product_conformers,
+        rc_conformers=rc_conformers,
+        pc_conformers=pc_conformers,
         isomorphism_idx=isomorphism_idx,
-        isomorphisms=reaction_isomorphisms
+        isomorphisms=reaction_isomorphisms,
+        settings=settings
     )
 
     for conformer in [rc_conformers, pc_conformers][isomorphism_idx]:

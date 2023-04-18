@@ -52,29 +52,7 @@
 #     print(time.time() - t)
 
 
-import numpy as np
+import os
 
-a = np.array([
-    [1, 0, 0],
-    [0, 1, 0],
-    [0, 0, 1],
-    [1, 0, 0]
-])
-
-b = 2 * a
-
-out = (b[np.newaxis, :, :] - a[:, np.newaxis, :])**2
-out = np.sqrt(np.mean(out, axis=-1))
-
-print(np.argwhere(out == np.min(out)))
-print(out[np.argwhere(out == np.min(out))[0]])
-# Out[21]: array([[2, 1]])
-
-print(np.argmin(out, axis=-1))
-print(np.argmin(out, axis=-2))
-
-print(out)
-
-# print(out[0, 0])
-# print(out[1, 1])
-# print(out[3, 1])
+for i in range(27507, 28000):
+    os.system(f'scancel {i}')

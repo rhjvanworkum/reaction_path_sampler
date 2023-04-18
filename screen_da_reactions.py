@@ -1,3 +1,7 @@
+"""
+Script to compute a set of DA cycloadditions
+"""
+
 import yaml
 import os
 
@@ -66,5 +70,5 @@ if __name__ == "__main__":
                 ])
 
             # execute
-            os.system(f'sbatch --cpus-per-task=32 --output={output_folder}{key}_{name}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
+            os.system(f'sbatch --cpus-per-task=20 --qos=cpus100 --output={output_folder}{key}_{name}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
 
