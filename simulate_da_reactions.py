@@ -7,8 +7,8 @@ import os
 
 
 if __name__ == "__main__":
-    output_folder = './scratch/da_reaction_cores/'
-    base_settings_file = 'systems/da_simple.yaml'
+    output_folder = './scratch/da_reaction_cores_2/'
+    base_settings_file = 'systems/da_core_test.yaml'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)

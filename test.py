@@ -1,58 +1,44 @@
-# from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-# import autode as ade
-# from autode.species import Complex
-# from autode.bond_rearrangement import get_bond_rearrangs
-# from autode.mol_graphs import reac_graph_to_prod_graph
+import numpy as np
 
-# from tqdm import tqdm
-# import time
 
-# import networkx as nx
+coords = np.ones((5, 3, 3))
+coords[:, 0, :] = np.array([1, 2, 3])
+coords[:, 1, :] = np.array([4, 5, 6])
+coords[:, 2, :] = np.array([7, 8, 9])
+
+coords2 = np.concatenate([coords, coords], axis=0)
+
+rmsd = (coords2[..., np.newaxis, :, :] - coords[..., :, np.newaxis, :])**2
+print(rmsd.shape)
+
+
+
+""" Test how many reaction paths worked """
+# import os
+# i = 0
+# for root, dirs, files in os.walk('./scratch/da_reaction_cores/'):
+#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores':
+#         if os.path.exists(os.path.join(root, 'reaction.xyz')):
+#             i += 1
+# print(i)
+
+
+""" Plot interpolated paths stuff """
 # import matplotlib.pyplot as plt
+# import numpy as np
+# from src.molecule import read_xyz_string
+# from src.utils import read_trajectory_file
 
-# from XTB import xtb_driver
+# structures, _ = read_trajectory_file('better_path.xyz')
+# geometries = []
 
-# def get_opt_energy(args):
-#     conf, complex, method, settings, cores = args
-#     return xtb_driver(
-#         conf,
-#         complex.charge,
-#         complex.mult,
-#         "opt",
-#         method=method,
-#         xcontrol_settings=settings,
-#         n_cores=cores
-#     )
+# for struct in structures:
+#     geometries.append(read_xyz_string(struct.split('\n')))
 
-# def conf_to_xyz_string(conf) -> str:
-#     str = f"{len(conf.atoms)}\n \n"
-#     for atom in conf.atoms:
-#         str += f"{atom.atomic_symbol} {round(atom.coord.x, 4)} {round(atom.coord.y, 4)} {round(atom.coord.z, 4)}\n"
-#     return str
+# n_atoms = len(geometries[0])
 
+# for i in range(n_atoms):
+#     for j in range(3):
+#         plt.plot(np.arange(len(geometries)), [geom[i].coordinates[j] for geom in geometries])
 
-# if __name__ == "__main__":
-#     # reac_smiles = ["C1=CC=CO1", "C=C"]
-#     # prod_smiles = ["C1=CC(O2)CCC12"]
-#     reactant_smiles = ["C1=C(C(=O)O)C(Cl)=CO1", "C=CCNO"]
-#     product_smiles = ["C(Cl)1=C(C(=O)O)C(O2)CC(CNO)C12"]
-#     start = Complex(*[ade.Molecule(smiles=smi) for smi in reactant_smiles])
-#     start._generate_conformers()
-
-
-#     N_PROCESSES = 8
-#     n_cores = 2
-#     method = "2"
-
-#     arguments = [(conf_to_xyz_string(conf), start, method, None, n_cores) for conf in start.conformers[:8]]
-
-#     t = time.time()
-#     with ThreadPoolExecutor(max_workers=N_PROCESSES) as executor:
-#         results = list(tqdm(executor.map(get_opt_energy, arguments), total=len(arguments)))
-#     print(time.time() - t)
-
-
-import os
-
-for i in range(27507, 28000):
-    os.system(f'scancel {i}')
+# plt.savefig('test2.png')
