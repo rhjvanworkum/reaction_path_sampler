@@ -19,7 +19,7 @@ if __name__ == "__main__":
     with open('da_reaction_cores.txt', 'r') as f:
         reaction_smiles_list = [line.replace('\n', '') for line in f.readlines()]
 
-    for idx, reaction_smiles in enumerate(reaction_smiles_list[:5]):
+    for idx, reaction_smiles in enumerate(reaction_smiles_list):
         output_dir = os.path.join(output_folder, f'{idx}')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -45,5 +45,5 @@ if __name__ == "__main__":
             ])
 
         # execute
-        os.system(f'sbatch --cpus-per-task=20 --qos=cpus100 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
+        os.system(f'sbatch --cpus-per-task=20 --time=01:00:00 --qos=cpus100 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
 
