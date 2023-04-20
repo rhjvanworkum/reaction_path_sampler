@@ -1,26 +1,29 @@
-import numpy as np
+# import numpy as np
 
 
-coords = np.ones((5, 3, 3))
-coords[:, 0, :] = np.array([1, 2, 3])
-coords[:, 1, :] = np.array([4, 5, 6])
-coords[:, 2, :] = np.array([7, 8, 9])
+# coords = np.ones((5, 3, 3))
+# coords[:, 0, :] = np.array([1, 2, 3])
+# coords[:, 1, :] = np.array([4, 5, 6])
+# coords[:, 2, :] = np.array([7, 8, 9])
 
-coords2 = np.concatenate([coords, coords], axis=0)
+# coords2 = np.concatenate([coords, coords], axis=0)
 
-rmsd = (coords2[..., np.newaxis, :, :] - coords[..., :, np.newaxis, :])**2
-print(rmsd.shape)
+# rmsd = (coords2[..., np.newaxis, :, :] - coords[..., :, np.newaxis, :])**2
+# print(rmsd.shape)
 
 
 
 """ Test how many reaction paths worked """
-# import os
-# i = 0
-# for root, dirs, files in os.walk('./scratch/da_reaction_cores/'):
-#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores':
-#         if os.path.exists(os.path.join(root, 'reaction.xyz')):
-#             i += 1
-# print(i)
+import os
+i = 0
+list = []
+for root, dirs, files in os.walk('./scratch/da_reaction_cores_2/'):
+    if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores_2':
+        if os.path.exists(os.path.join(root, 'reaction.xyz')):
+            list.append(int(root.split('/')[-1]))
+            i += 1
+print(i)
+print(sorted(list))
 
 
 """ Plot interpolated paths stuff """

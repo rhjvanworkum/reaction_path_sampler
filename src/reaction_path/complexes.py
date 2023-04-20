@@ -11,6 +11,7 @@ from concurrent.futures import ProcessPoolExecutor
 import time
 from tqdm import tqdm
 
+import autode as ade
 from autode.geom import calc_heavy_atom_rmsd, get_rot_mat_kabsch
 from autode.conformers.conformer import Conformer
 
@@ -24,7 +25,7 @@ def generate_reactant_product_complexes(
     solvent: str,
     settings: Any,
     save_path: str
-) -> List[Conformer]:
+) -> Tuple[List[Conformer]]:
     rps = ReactiveComplexSampler(
         smiles_strings=smiles_strings,
         solvent=solvent,
@@ -32,6 +33,15 @@ def generate_reactant_product_complexes(
     )
 
     complex = rps._get_ade_complex()
+
+    species_complex_mapping = None
+    if len(smiles_strings) == 2:
+        species_complex_mapping = {}
+        mols = [ade.Molecule(smiles=smi) for smi in smiles_strings]
+        tot_atoms = 0
+        for idx, mol in enumerate(mols):
+            species_complex_mapping[idx] = np.arange(tot_atoms, tot_atoms + len(mol.atoms))
+            tot_atoms += len(mol.atoms)
 
     if os.path.exists(save_path):
         conformers, _ = read_trajectory_file(save_path)
@@ -66,7 +76,7 @@ def generate_reactant_product_complexes(
         with open(save_path, 'w') as f:
             f.writelines(remove_whitespaces_from_xyz_strings(conformer_xyz_list))
 
-    return complex, conformer_list
+    return complex, conformer_list, len(smiles_strings), species_complex_mapping
 
 
 def compute_optimal_rmsd(args):
@@ -97,16 +107,9 @@ def compute_optimal_rmsd_bb(args):
 def select_promising_reactant_product_pairs(
     rc_conformers: List[Conformer],
     pc_conformers: List[Conformer],
-    bonds: List[Tuple[int, int]],
+    species_complex_mapping: Any,
     settings: Any
 ) -> List[Tuple[int]]:
-    """
-    This function aims to find the set of most promising reactant + product complex
-    pairs to find a reaction path between.
-
-    The current formulation is based on a mixture between RMSD between the complexes &
-    the distances between the atoms which bonds change during the reaction
-    """
     k = settings['max_n_aligned_screening_pairs']
     n_reactant_product_pairs = settings['max_n_reactant_product_pairs']
 
@@ -117,13 +120,26 @@ def select_promising_reactant_product_pairs(
     for i in range(len(rc_conformers)):
         for j in range(len(pc_conformers)):
             indices.append((i, j))
-            scores.append(
-                sum([
-                    np.sqrt(np.mean((rc_conformers[bond[0]].coordinates - rc_conformers[bond[1]].coordinates)**2)) for bond in bonds
-                ]) + sum([
-                    np.sqrt(np.mean((pc_conformers[bond[0]].coordinates - pc_conformers[bond[1]].coordinates)**2)) for bond in bonds
-                ])
+
+            rmsd = 0
+            for key, idxs in species_complex_mapping.items():
+                rc_coords = rc_conformers[i].coordinates[idxs]
+                pc_coords = pc_conformers[j].coordinates[idxs]
+                rc_coords = compute_optimal_coordinates(
+                    rc_coords, pc_coords
+                )
+                rmsd += np.sqrt(np.mean((pc_coords - rc_coords)**2))
+
+            # TODO: also add penalty term here for RMSD of whole complex
+            rc_coords = rc_conformers[i].coordinates
+            pc_coords = pc_conformers[j].coordinates
+            rc_coords = compute_optimal_coordinates(
+                rc_coords, pc_coords
             )
+            rmsd += np.sqrt(np.mean((pc_coords - rc_coords)**2))
+
+            scores.append(rmsd)
+
     print(f'RMSD complexes compute time {time.time() - t}')
     indices = np.array(indices)
     scores = np.array(scores)    
@@ -137,20 +153,71 @@ def select_promising_reactant_product_pairs(
         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
     else:
         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
-        # perform an extra screening round of top k
-        # pre_opt_pairs = min(k, len(scores) - 1)
-        # pre_opt_idxs = indices[np.argpartition(scores, pre_opt_pairs)[:pre_opt_pairs]]
-        # args = [
-        #     (idxs, rc_conformers[idxs[0]].coordinates, pc_conformers[idxs[1]].coordinates, bonds) for idxs in pre_opt_idxs
-        # ]
-        # with ProcessPoolExecutor(max_workers=int(settings['n_processes'] * settings['xtb_n_cores'])) as executor:
-        #     results = list(tqdm(executor.map(compute_optimal_rmsd_bb, args), total=len(args), desc="Computing optimal complex RMSD scores"))
-        # idxs = np.array([result[0] for result in results])
-        # scores = np.array([result[1] for result in results])
-        # opt_idxs = idxs[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
-
     return opt_idxs
+    
 
+
+# def select_promising_reactant_product_pairs(
+#     rc_conformers: List[Conformer],
+#     pc_conformers: List[Conformer],
+#     bonds: List[Tuple[int, int]],
+#     settings: Any
+# ) -> List[Tuple[int]]:
+#     """
+#     This function aims to find the set of most promising reactant + product complex
+#     pairs to find a reaction path between.
+
+#     The current formulation is based on a mixture between RMSD between the complexes &
+#     the distances between the atoms which bonds change during the reaction
+#     """
+#     k = settings['max_n_aligned_screening_pairs']
+#     n_reactant_product_pairs = settings['max_n_reactant_product_pairs']
+
+#     # TODO: parallelize this?
+#     indices = []
+#     scores = []
+#     t = time.time()
+#     for i in range(len(rc_conformers)):
+#         for j in range(len(pc_conformers)):
+#             indices.append((i, j))
+#             scores.append(
+#                 sum([
+#                     np.sqrt(np.mean((rc_conformers[bond[0]].coordinates - rc_conformers[bond[1]].coordinates)**2)) for bond in bonds
+#                 ]) + sum([
+#                     np.sqrt(np.mean((pc_conformers[bond[0]].coordinates - pc_conformers[bond[1]].coordinates)**2)) for bond in bonds
+#                 ])
+#             )
+#     print(f'RMSD complexes compute time {time.time() - t}')
+#     indices = np.array(indices)
+#     scores = np.array(scores)    
+
+#     if len(scores) == 1:
+#         print(f'Only 1 reactant & product complex was found')
+#         opt_idxs = [indices[0]]
+#     elif len(scores) <= n_reactant_product_pairs:
+#         n_reactant_product_pairs = len(scores) - 1
+#         print(f'reduced amount of reactant & product pairs to {n_reactant_product_pairs}')
+#         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
+#     else:
+#         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
+#     return opt_idxs
+
+
+# def select_promising_reactant_product_pairs(
+#     rc_conformers: List[Conformer],
+#     pc_conformers: List[Conformer],
+#     bonds: List[Tuple[int, int]],
+#     settings: Any
+# ) -> List[Tuple[int]]:
+#     """
+#     This function aims to find the set of most promising reactant + product complex
+#     pairs to find a reaction path between.
+
+#     The current formulation is based on a mixture between RMSD between the complexes &
+#     the distances between the atoms which bonds change during the reaction
+#     """
+#     k = settings['max_n_aligned_screening_pairs']
+#     n_reactant_product_pairs = settings['max_n_reactant_product_pairs']
 
     # # compute RMSDS for each pair
     # indices = []

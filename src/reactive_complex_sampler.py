@@ -156,7 +156,8 @@ class ReactiveComplexSampler:
         )
         xcontrol_settings += get_metadynamics_constraint(
             complex,
-            self.settings
+            self.settings,
+            len(self.smiles_strings)
         )
 
         structures, _ = xtb_driver(

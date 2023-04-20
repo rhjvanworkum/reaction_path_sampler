@@ -46,8 +46,18 @@ def main(settings: Dict[str, Any]) -> None:
     set_autode_settings(settings)
 
     # generate rc/pc complexes & reaction isomorphisms
-    rc_complex, rc_conformers = generate_reactant_product_complexes(reactant_smiles, solvent, settings, f'{output_dir}/rcs.xyz')
-    pc_complex, pc_conformers = generate_reactant_product_complexes(product_smiles, solvent, settings, f'{output_dir}/pcs.xyz')     
+    rc_complex, rc_conformers, rc_n_species, rc_species_complex_mapping = generate_reactant_product_complexes(
+        reactant_smiles, 
+        solvent, 
+        settings, 
+        f'{output_dir}/rcs.xyz'
+    )
+    pc_complex, pc_conformers, pc_n_species, pc_species_complex_mapping = generate_reactant_product_complexes(
+        product_smiles, 
+        solvent, 
+        settings, 
+        f'{output_dir}/pcs.xyz'
+    )     
     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(rc_complex, pc_complex)
 
     # select best reaction isomorphism & remap reaction
@@ -67,6 +77,10 @@ def main(settings: Dict[str, Any]) -> None:
     # TODO: parallelize this?
     for conformer in [rc_conformers, pc_conformers][isomorphism_idx]:
         remap_conformer(conformer, isomorphism)
+
+    species_complex_mapping = [rc_species_complex_mapping, pc_species_complex_mapping][isomorphism_idx]
+    for key, value in species_complex_mapping.items():
+        species_complex_mapping[key] = np.array([isomorphism[idx] for idx in value])
     print(f'remapping all conformers took: {time.time() - t}')
     
     # select closest pairs of reactants & products
@@ -75,7 +89,8 @@ def main(settings: Dict[str, Any]) -> None:
     closest_pairs = select_promising_reactant_product_pairs(
         rc_conformers=rc_conformers,
         pc_conformers=pc_conformers,
-        bonds=bond_rearr.all,
+        species_complex_mapping=species_complex_mapping,
+        # bonds=bond_rearr.all,
         settings=settings
     )
     print(f'Selecting most promising Reactant-Product Complex pairs took: {time.time() - t}\n\n')
