@@ -205,10 +205,10 @@ class ReactiveComplexSampler:
             conformers = crest_driver(
                 ref_structure=complex.to_xyz_string(),
                 ensemble_structures='\n'.join(conformers),
-                ref_energy_threshold=self.settings["ref_energy_threshold"],
-                rmsd_threshold=self.settings["rmsd_threshold"],
-                conf_energy_threshold=self.settings["conf_energy_threshold"],
-                rotational_threshold=self.settings["rotational_threshold"],
+                ref_energy_threshold=self.settings["ref_energy_threshold"][len(self.smiles_strings)],
+                rmsd_threshold=self.settings["rmsd_threshold"][len(self.smiles_strings)],
+                conf_energy_threshold=self.settings["conf_energy_threshold"][len(self.smiles_strings)],
+                rotational_threshold=self.settings["rotational_threshold"][len(self.smiles_strings)],
             )
         
         pruned_conformers = []

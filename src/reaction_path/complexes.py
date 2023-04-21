@@ -5,6 +5,7 @@ Each reaction path needs a reactant + product complex
 
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
+import math
 from typing import Callable, Dict, List, Optional, Tuple, Any
 import os
 from concurrent.futures import ProcessPoolExecutor
@@ -79,30 +80,29 @@ def generate_reactant_product_complexes(
     return complex, conformer_list, len(smiles_strings), species_complex_mapping
 
 
-def compute_optimal_rmsd(args):
-    idxs, rc_coordinates, pc_coordinates = args
-    new_rc_coordinates = compute_optimal_coordinates(
-        rc_coordinates,
-        pc_coordinates
-    )
-    return idxs, np.sqrt(np.mean((pc_coordinates - new_rc_coordinates)**2))
+def compute_score(args):
+    idx_list, scores = [], []
+    for arg in args:
+        idx, rc_coords, pc_coords, species_complex_mapping, mix_param = arg
 
-def compute_optimal_rmsd_bb(args):
-    idxs, rc_coordinates, pc_coordinates, bonds = args
-    new_rc_coordinates = compute_optimal_coordinates(
-        rc_coordinates,
-        pc_coordinates
-    )
-    # rmsd = np.sqrt(np.mean((pc_coordinates - new_rc_coordinates)**2))
-    bb = sum([
-        np.sqrt(np.mean((new_rc_coordinates[bond[0]] - new_rc_coordinates[bond[1]])**2)) for bond in bonds
-    ]) 
-    bb += sum([
-        np.sqrt(np.mean((pc_coordinates[bond[0]] - pc_coordinates[bond[1]])**2)) for bond in bonds
-    ])
+        score = 0
+        for _, idxs in species_complex_mapping.items():
+            sub_system_rc_coords = rc_coords[idxs]
+            sub_system_pc_coords = pc_coords[idxs]
+            sub_system_rc_coords_aligned = compute_optimal_coordinates(
+                sub_system_rc_coords, sub_system_pc_coords
+            )
+            score += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
 
-    score = bb
-    return idxs, score
+        rc_coords_aligned = compute_optimal_coordinates(
+            rc_coords, pc_coords
+        )
+        score += mix_param * np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
+
+        idx_list.append(idx)
+        scores.append(score)
+
+    return idx_list, scores
 
 def select_promising_reactant_product_pairs(
     rc_conformers: List[Conformer],
@@ -110,39 +110,57 @@ def select_promising_reactant_product_pairs(
     species_complex_mapping: Any,
     settings: Any
 ) -> List[Tuple[int]]:
-    k = settings['max_n_aligned_screening_pairs']
+    mix_param = settings['mix_param']
     n_reactant_product_pairs = settings['max_n_reactant_product_pairs']
 
-    # TODO: parallelize this?
-    indices = []
-    scores = []
-    t = time.time()
+
+    """ Parallel version is actually slower, sad face """
+    # n_processes = int(settings['n_processes'] * settings['xtb_n_cores'])
+    # all_args = []
+    # for i in range(len(rc_conformers)):
+    #     for j in range(len(pc_conformers)):
+    #         all_args.append((
+    #             (i, j), rc_conformers[i].coordinates, pc_conformers[j].coordinates, species_complex_mapping
+    #         ))
+    # chunk_size = math.ceil(len(all_args) / n_processes) // 5
+    # args = [all_args[i:i+chunk_size] for i in np.arange(0, len(all_args), chunk_size)]
+
+    # with ProcessPoolExecutor(max_workers=n_processes) as executor:
+    #     results = list(tqdm(executor.map(compute_score, args), total=len(args), desc="Computing Reactant-Product complex scores"))
+
+    # indices, scores = [], []
+    # for (idx_list, score_list) in results:
+    #     indices += idx_list
+    #     scores += score_list
+    # indices = np.array(indices)
+    # scores = np.array(scores)  
+
+    indices, scores = [], []
     for i in range(len(rc_conformers)):
         for j in range(len(pc_conformers)):
-            indices.append((i, j))
-
-            rmsd = 0
-            for key, idxs in species_complex_mapping.items():
-                rc_coords = rc_conformers[i].coordinates[idxs]
-                pc_coords = pc_conformers[j].coordinates[idxs]
-                rc_coords = compute_optimal_coordinates(
-                    rc_coords, pc_coords
-                )
-                rmsd += np.sqrt(np.mean((pc_coords - rc_coords)**2))
-
-            # TODO: also add penalty term here for RMSD of whole complex
+            idx = (i, j)
             rc_coords = rc_conformers[i].coordinates
             pc_coords = pc_conformers[j].coordinates
-            rc_coords = compute_optimal_coordinates(
+
+            score = 0
+            for _, idxs in species_complex_mapping.items():
+                sub_system_rc_coords = rc_coords[idxs]
+                sub_system_pc_coords = pc_coords[idxs]
+                sub_system_rc_coords_aligned = compute_optimal_coordinates(
+                    sub_system_rc_coords, sub_system_pc_coords
+                )
+                score += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
+
+            rc_coords_aligned = compute_optimal_coordinates(
                 rc_coords, pc_coords
             )
-            rmsd += np.sqrt(np.mean((pc_coords - rc_coords)**2))
+            score += mix_param * np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
 
-            scores.append(rmsd)
-
-    print(f'RMSD complexes compute time {time.time() - t}')
+            indices.append(idx)
+            scores.append(score)
     indices = np.array(indices)
-    scores = np.array(scores)    
+    scores = np.array(scores)  
+
 
     if len(scores) == 1:
         print(f'Only 1 reactant & product complex was found')
@@ -153,6 +171,7 @@ def select_promising_reactant_product_pairs(
         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
     else:
         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
+    
     return opt_idxs
     
 

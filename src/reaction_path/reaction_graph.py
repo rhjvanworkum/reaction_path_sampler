@@ -50,21 +50,38 @@ def compute_rmsd(coords1, coords2):
     return np.sqrt(np.mean((coords2 - coords1)**2))
 
 def compute_isomorphism_score(args) -> float:
-    isomorphism, coords1, coords2 = args
+    isomorphism, species_complex_mapping, coords1, coords2 = args
+
+    # remap coords based on isomorphism
     ordering = np.array(sorted(isomorphism, key=isomorphism.get))
-    coords2 = coords2[:, ordering, :]    
-    rmsds = []
-    for i in range(coords1.shape[0]):
-        for j in range(coords2.shape[0]):
-            rmsds.append(compute_rmsd(
-                coords1[i],
-                coords2[j]
-            ))
-    return np.min(np.array(rmsds))
+    coords2 = coords2[ordering, :]   
+
+    # remap species mapping based on isomorphism
+    for key, value in species_complex_mapping.items():
+        species_complex_mapping[key] = np.array([isomorphism[idx] for idx in value])
+
+    rmsd = 0
+    for _, idxs in species_complex_mapping.items():
+        sub_system_rc_coords = coords1[idxs, :]
+        sub_system_pc_coords = coords2[idxs, :]
+        sub_system_rc_coords_aligned = compute_optimal_coordinates(
+            sub_system_rc_coords, sub_system_pc_coords
+        )
+        rmsd += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
+
+    rc_coords = coords1
+    pc_coords = coords2
+    rc_coords_aligned = compute_optimal_coordinates(
+        rc_coords, pc_coords
+    )
+    rmsd += np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
+    return rmsd
 
 def select_ideal_isomorphism(
     rc_conformers: List[Conformer],
     pc_conformers: List[Conformer],
+    rc_species_complex_mapping, 
+    pc_species_complex_mapping,
     isomorphism_idx: int,
     isomorphisms: List[Dict[int, int]],
     settings: Any
@@ -76,25 +93,52 @@ def select_ideal_isomorphism(
     
     scores = []
 
+    # if isomorphism_idx == 0:
+    #     coords_no_remap = np.stack([
+    #         pc_conformers[i] .coordinates for i in np.random.choice(len(pc_conformers), size=min(100, len(pc_conformers)), replace=False)
+    #     ])
+    #     coords_to_remap = np.stack([
+    #         rc_conformers[i] .coordinates for i in np.random.choice(len(rc_conformers), size=min(100, len(rc_conformers)), replace=False)
+    #     ])
+    # elif isomorphism_idx == 1:
+    #     coords_no_remap = np.stack([
+    #         rc_conformers[i] .coordinates for i in np.random.choice(len(rc_conformers), size=min(100, len(rc_conformers)), replace=False)
+    #     ])
+    #     coords_to_remap = np.stack([
+    #         pc_conformers[i] .coordinates for i in np.random.choice(len(pc_conformers), size=min(100, len(pc_conformers)), replace=False)
+    #     ])
+    # else:
+    #     raise ValueError(f"isomorphism idx can not be {isomorphism_idx}")
+    # if isomorphism_idx == 0:
+    #     coords_no_remap = np.stack([
+    #         pc_conformers[i].coordinates for i in [0] # range(len(pc_conformers))
+    #     ])
+    #     coords_to_remap = np.stack([
+    #         rc_conformers[i].coordinates for i in [0] # range(len(rc_conformers))
+    #     ])
+    # elif isomorphism_idx == 1:
+    #     coords_no_remap = np.stack([
+    #         rc_conformers[i].coordinates for i in [0] # range(len(rc_conformers))
+    #     ])
+    #     coords_to_remap = np.stack([
+    #         pc_conformers[i].coordinates for i in [0] # range(len(pc_conformers))
+    #     ])
+    # else:
+    #     raise ValueError(f"isomorphism idx can not be {isomorphism_idx}")
+   
     if isomorphism_idx == 0:
-        coords_no_remap = np.stack([
-            pc_conformers[i] .coordinates for i in np.random.choice(len(pc_conformers), size=min(100, len(pc_conformers)), replace=False)
-        ])
-        coords_to_remap = np.stack([
-            rc_conformers[i] .coordinates for i in np.random.choice(len(rc_conformers), size=min(100, len(rc_conformers)), replace=False)
-        ])
+        coords_no_remap = pc_conformers[0].coordinates
+        coords_to_remap = rc_conformers[0].coordinates
     elif isomorphism_idx == 1:
-        coords_no_remap = np.stack([
-            rc_conformers[i] .coordinates for i in np.random.choice(len(rc_conformers), size=min(100, len(rc_conformers)), replace=False)
-        ])
-        coords_to_remap = np.stack([
-            pc_conformers[i] .coordinates for i in np.random.choice(len(pc_conformers), size=min(100, len(pc_conformers)), replace=False)
-        ])
+        coords_no_remap = rc_conformers[0].coordinates
+        coords_to_remap = pc_conformers[0].coordinates
     else:
         raise ValueError(f"isomorphism idx can not be {isomorphism_idx}")
-    
+
+    species_complex_mapping = [rc_species_complex_mapping, pc_species_complex_mapping][isomorphism_idx]
+
     args = [
-        (isomorphism, coords_no_remap, coords_to_remap) for isomorphism in isomorphisms
+        (isomorphism, species_complex_mapping, coords_no_remap, coords_to_remap) for isomorphism in isomorphisms
     ]
     with ProcessPoolExecutor(max_workers=int(settings['n_processes'] * settings['xtb_n_cores'])) as executor:
         scores = list(tqdm(executor.map(compute_isomorphism_score, args), total=len(args), desc="Computing isomorphisms score"))

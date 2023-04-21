@@ -66,6 +66,8 @@ def main(settings: Dict[str, Any]) -> None:
     isomorphism = select_ideal_isomorphism(
         rc_conformers=rc_conformers,
         pc_conformers=pc_conformers,
+        rc_species_complex_mapping=rc_species_complex_mapping, 
+        pc_species_complex_mapping=pc_species_complex_mapping,
         isomorphism_idx=isomorphism_idx,
         isomorphisms=reaction_isomorphisms,
         settings=settings
@@ -94,7 +96,7 @@ def main(settings: Dict[str, Any]) -> None:
         settings=settings
     )
     print(f'Selecting most promising Reactant-Product Complex pairs took: {time.time() - t}\n\n')
-
+    print(closest_pairs)
 
     for idx, opt_idx in enumerate(closest_pairs):
         if not os.path.exists(f'{output_dir}/{idx}'):
@@ -145,7 +147,7 @@ def main(settings: Dict[str, Any]) -> None:
             tsopt[1] = f"{imaginary_freq} \n"
             write_output_file(tsopt, f'{output_dir}/{idx}/ts_opt.xyz')
 
-            if imaginary_freq < settings['min_ts_imaginary_freq']:
+            if imaginary_freq < settings['min_ts_imaginary_freq'] and imaginary_freq > settings['max_ts_imaginary_freq']:
                 # 4. IRC calculation in pysisphus
                 t = time.time()
                 output, forward_irc, backward_irc, forward_end, backward_end = pysisyphus_driver(
@@ -219,7 +221,7 @@ def main(settings: Dict[str, Any]) -> None:
                     print("IRC failed\n\n")
             
             else:
-                print(f"TS curvature is too low ({imaginary_freq} cm-1)\n\n")
+                print(f"TS curvature, ({imaginary_freq} cm-1), is not within allowed interval \n\n")
         
         else:
             print("TS optimization failed\n\n")
