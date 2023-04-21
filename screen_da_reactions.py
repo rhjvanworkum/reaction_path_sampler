@@ -66,7 +66,7 @@ if __name__ == "__main__":
                 f.writelines([
                     '#!/bin/bash \n',
                     'source env.sh \n',
-                    f'python main.py {yaml_file_name}'
+                    f'python -u main.py {yaml_file_name}'
                 ])
 
             # execute

@@ -7,8 +7,8 @@ import os
 
 
 if __name__ == "__main__":
-    output_folder = './scratch/da_reaction_cores_2/'
-    base_settings_file = 'systems/da_core_test.yaml'
+    output_folder = './scratch/da_reaction_cores_3/'
+    base_settings_file = 'systems/latest_test.yaml'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         reactants, products = reaction_smiles.split('>>')
         settings['reactant_smiles'] = reactants.split('.')
         settings['product_smiles'] = products.split('.')
-        settings['n_processes'] = 16
+        settings['n_processes'] = 10
 
         # yaml file
         yaml_file_name = f'{idx}.yaml'
@@ -41,9 +41,9 @@ if __name__ == "__main__":
             f.writelines([
                 '#!/bin/bash \n',
                 'source env.sh \n',
-                f'python main.py {os.path.join(output_folder, yaml_file_name)}'
+                f'python -u main.py {os.path.join(output_folder, yaml_file_name)}'
             ])
 
         # execute
-        os.system(f'sbatch --cpus-per-task=20 --time=01:00:00 --qos=cpus100 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
+        os.system(f'sbatch --cpus-per-task=20 --time=01:00:00 --qos=cpus150 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
 

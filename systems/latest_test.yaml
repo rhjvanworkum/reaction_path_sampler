@@ -2,10 +2,15 @@
 ### 1. GENERAL SETTINGS
 ###
 
-output_dir: './scratch/test5'
-reactant_smiles: ["[H]C(C)=CC=C([H])C", "CC=C(F)F"]
-product_smiles: ["CC1C=CC(C)C(F)(F)C1C"]
+output_dir: './scratch/test3'
+product_smiles:
+- CC1C=CC(C)C(C)(C)C1
+reactant_smiles:
+- '[H]C(C)=CC=C([H])C'
+- '[H]C([H])=C(C)C'
 solvent: "Methanol"
+
+mix_param: 0.8
 
 n_initial_complexes: 1
 max_n_aligned_screening_pairs: 1000
@@ -26,8 +31,6 @@ num_complex_random_rotations: 2
 ### 2. CONFORMER SAMPLING SETTINGS
 ###
 
-use_cregen_pruning: True
-
 # MD settings
 md_settings: {
   "shake": 2,
@@ -38,7 +41,7 @@ md_time_per_atom: 1.0
 
 # metadyn settings
 metadyn_settings: {
-  'save': 30,
+  'save': 100,
   'kpush': 1.0, 
   'alp': 0.200
 }
@@ -51,10 +54,12 @@ cavity_scale: 0.8
 cavity_offset: 2.0
 
 # CREGEN settings
-ref_energy_threshold: 6.0
-rmsd_threshold: 0.4
-conf_energy_threshold: 1.0 
-rotational_threshold: 2.0
+use_cregen_pruning: True
+
+ref_energy_threshold: [0, 6.0, 6.0]
+rmsd_threshold: [0, 0.4, 0.1]
+conf_energy_threshold: [0, 0.01, 0.01]
+rotational_threshold: [0, 2.0, 2.0]
 
 
 ### 
@@ -72,5 +77,5 @@ maxiter: 15
 ### 
 ### 4. TS optimization
 ###
-
 min_ts_imaginary_freq: -300
+max_ts_imaginary_freq: -1000
