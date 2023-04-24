@@ -113,14 +113,13 @@ def set_autode_settings(settings):
 def remap_conformer(
     conformer: Conformer, 
     mapping: Dict[int, int]
-) -> None:
-    conformer._parent_atoms = Atoms(
-        [conformer.atoms[i] for i in sorted(mapping, key=mapping.get)]
+) -> Conformer:
+    return Conformer(
+        name=conformer.name,
+        atoms=[conformer.atoms[i] for i in sorted(mapping, key=mapping.get)],
+        charge=conformer.charge,
+        mult=conformer.mult
     )
-    conformer._coordinates = np.array(
-        [conformer._coordinates[i] for i in sorted(mapping, key=mapping.get)]
-    )
-
 
 def sort_complex_conformers_on_distance(
     conformers: List[Conformer],

@@ -2,12 +2,12 @@
 ### 1. GENERAL SETTINGS
 ###
 
-output_dir: './scratch/9_test'
+output_dir: './scratch/101_test'
 product_smiles:
-- CC1CCC=CC1O
+- CC1C(O)CC=CC1(C)C
 reactant_smiles:
-- '[H]C([H])=CC=C([H])O'
-- '[H]C([H])=C([H])C'
+- '[H]C([H])=CC=C(C)C'
+- '[H]C(C)=C([H])O'
 solvent: "Methanol"
 
 mix_param: 0.8

@@ -9,10 +9,9 @@
 # print(np.arange(0, len(all_args), chunk_size))
 
 # print([0, 1, 2, 3, 4][2:])
-# import os
-# for i in range(28583, 29000):
-#     if i != 28277:
-#         os.system(f'scancel {i}')
+import os
+for i in range(28940, 30000):
+    os.system(f'scancel {i}')
 
 # import os
 # import shutil 
@@ -35,8 +34,8 @@
 import os
 i = 0
 list = []
-for root, dirs, files in os.walk('./scratch/da_reaction_cores_4/'):
-    if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores_4':
+for root, dirs, files in os.walk('./scratch/da_reaction_cores_5/'):
+    if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores_5':
         if os.path.exists(os.path.join(root, 'reaction.xyz')):
             list.append(int(root.split('/')[-1]))
             i += 1

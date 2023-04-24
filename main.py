@@ -16,7 +16,7 @@ from autode.mol_graphs import (
 from src.reaction_path.complexes import compute_optimal_coordinates, generate_reactant_product_complexes, select_promising_reactant_product_pairs
 from src.reaction_path.path_interpolation import interpolate_geodesic
 from src.reaction_path.reaction_ends import check_reaction_ends
-from src.reaction_path.reaction_graph import get_reaction_isomorphisms, select_ideal_isomorphism
+from src.reaction_path.reaction_graph import get_reaction_isomorphisms, select_ideal_isomorphism, select_ideal_pair_isomorphism
 
 from src.ts_template import TStemplate
 from src.interfaces.PYSISYPHUS import pysisyphus_driver
@@ -46,13 +46,13 @@ def main(settings: Dict[str, Any]) -> None:
     set_autode_settings(settings)
 
     # generate rc/pc complexes & reaction isomorphisms
-    rc_complex, rc_conformers, rc_n_species, rc_species_complex_mapping = generate_reactant_product_complexes(
+    rc_complex, _rc_conformers, rc_n_species, rc_species_complex_mapping = generate_reactant_product_complexes(
         reactant_smiles, 
         solvent, 
         settings, 
         f'{output_dir}/rcs.xyz'
     )
-    pc_complex, pc_conformers, pc_n_species, pc_species_complex_mapping = generate_reactant_product_complexes(
+    pc_complex, _pc_conformers, pc_n_species, pc_species_complex_mapping = generate_reactant_product_complexes(
         product_smiles, 
         solvent, 
         settings, 
@@ -64,8 +64,8 @@ def main(settings: Dict[str, Any]) -> None:
     t = time.time()
     print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
     isomorphism = select_ideal_isomorphism(
-        rc_conformers=rc_conformers,
-        pc_conformers=pc_conformers,
+        rc_conformers=_rc_conformers,
+        pc_conformers=_pc_conformers,
         rc_species_complex_mapping=rc_species_complex_mapping, 
         pc_species_complex_mapping=pc_species_complex_mapping,
         isomorphism_idx=isomorphism_idx,
@@ -77,8 +77,12 @@ def main(settings: Dict[str, Any]) -> None:
     t = time.time()
     print('remapping all conformers now ..')
     # TODO: parallelize this?
-    for conformer in [rc_conformers, pc_conformers][isomorphism_idx]:
-        remap_conformer(conformer, isomorphism)
+    if isomorphism_idx == 0:
+        rc_conformers = [remap_conformer(conf, isomorphism) for conf in _rc_conformers]
+        pc_conformers = _pc_conformers
+    elif isomorphism_idx == 1:
+        rc_conformers = _rc_conformers
+        pc_conformers = [remap_conformer(conf, isomorphism) for conf in _pc_conformers]
 
     species_complex_mapping = [rc_species_complex_mapping, pc_species_complex_mapping][isomorphism_idx]
     for key, value in species_complex_mapping.items():
@@ -104,21 +108,27 @@ def main(settings: Dict[str, Any]) -> None:
 
         print(f'Working on Reactant-Product Complex pair {idx}')
 
+        # screen all isomorphisms once more
+        isomorphism = select_ideal_pair_isomorphism(
+            rc_conformer=_rc_conformers[opt_idx[0]],
+            pc_conformer=_pc_conformers[opt_idx[1]],
+            isomorphism_idx=isomorphism_idx,
+            isomorphisms=reaction_isomorphisms,
+            settings=settings
+        )
+
+        if isomorphism_idx == 0:
+            rc_conformer = remap_conformer(_rc_conformers[opt_idx[0]], isomorphism)
+            pc_conformer = _pc_conformers[opt_idx[1]]
+        elif isomorphism_idx == 1:
+            rc_conformer = _rc_conformers[opt_idx[0]]
+            pc_conformer = remap_conformer(_pc_conformers[opt_idx[1]], isomorphism)     
+
         # 1. Optimally align the 2 conformers using kabsh algorithm
         t = time.time()
-        rc_conformer = rc_conformers[opt_idx[0]]
-        pc_conformer = pc_conformers[opt_idx[1]]
+        # rc_conformer = rc_conformers[opt_idx[0]]
+        # pc_conformer = pc_conformers[opt_idx[1]]
         rc_conformer._coordinates = compute_optimal_coordinates(rc_conformer.coordinates, pc_conformer.coordinates)
-        
-        # new_coords = np.zeros(rc_conformer.coordinates.shape)
-        # for _, idxs in species_complex_mapping.items():
-        #     sub_system_rc_coords = rc_conformer.coordinates[idxs]
-        #     sub_system_pc_coords = pc_conformer.coordinates[idxs]
-        #     sub_system_rc_coords_aligned = compute_optimal_coordinates(
-        #         sub_system_rc_coords, sub_system_pc_coords
-        #     )
-        #     new_coords[idxs] = sub_system_rc_coords_aligned
-        # rc_conformer._coordinates = new_coords
         
         atoms_to_xyz_file(rc_conformer.atoms, f'{output_dir}/{idx}/selected_rc.xyz')
         atoms_to_xyz_file(pc_conformer.atoms, f'{output_dir}/{idx}/selected_pc.xyz')
