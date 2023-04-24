@@ -7,7 +7,7 @@ import os
 
 
 if __name__ == "__main__":
-    output_folder = './scratch/da_reaction_cores_3/'
+    output_folder = './scratch/da_reaction_cores_4/'
     base_settings_file = 'systems/latest_test.yaml'
 
     if not os.path.exists(output_folder):
@@ -45,5 +45,5 @@ if __name__ == "__main__":
             ])
 
         # execute
-        os.system(f'sbatch --cpus-per-task=20 --time=01:00:00 --qos=cpus150 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
+        os.system(f'sbatch --cpus-per-task=20 --time=01:00:00 --qos=cpus100 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
 

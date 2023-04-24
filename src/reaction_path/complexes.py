@@ -80,34 +80,39 @@ def generate_reactant_product_complexes(
     return complex, conformer_list, len(smiles_strings), species_complex_mapping
 
 
-def compute_score(args):
-    idx_list, scores = [], []
-    for arg in args:
-        idx, rc_coords, pc_coords, species_complex_mapping, mix_param = arg
+# def compute_score(args):
+#     idx_list, scores = [], []
+#     for arg in args:
+#         idx, rc_coords, pc_coords, species_complex_mapping, mix_param, bonds = arg
 
-        score = 0
-        for _, idxs in species_complex_mapping.items():
-            sub_system_rc_coords = rc_coords[idxs]
-            sub_system_pc_coords = pc_coords[idxs]
-            sub_system_rc_coords_aligned = compute_optimal_coordinates(
-                sub_system_rc_coords, sub_system_pc_coords
-            )
-            score += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
+#         score = 0
+#         for _, idxs in species_complex_mapping.items():
+#             sub_system_rc_coords = rc_coords[idxs]
+#             sub_system_pc_coords = pc_coords[idxs]
+#             sub_system_rc_coords_aligned = compute_optimal_coordinates(
+#                 sub_system_rc_coords, sub_system_pc_coords
+#             )
+#             score += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
 
-        rc_coords_aligned = compute_optimal_coordinates(
-            rc_coords, pc_coords
-        )
-        score += mix_param * np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
+#         score += sum([
+#             np.sqrt(np.mean((rc_coords[bond[0], :] - rc_coords[bond[1], :])**2)) for bond in bonds
+#         ])
 
-        idx_list.append(idx)
-        scores.append(score)
+#         # rc_coords_aligned = compute_optimal_coordinates(
+#         #     rc_coords, pc_coords
+#         # )
+#         # score += mix_param * np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
 
-    return idx_list, scores
+#         idx_list.append(idx)
+#         scores.append(score)
+
+#     return idx_list, scores
 
 def select_promising_reactant_product_pairs(
     rc_conformers: List[Conformer],
     pc_conformers: List[Conformer],
     species_complex_mapping: Any,
+    bonds: Any,
     settings: Any
 ) -> List[Tuple[int]]:
     mix_param = settings['mix_param']
@@ -143,18 +148,27 @@ def select_promising_reactant_product_pairs(
             pc_coords = pc_conformers[j].coordinates
 
             score = 0
-            for _, idxs in species_complex_mapping.items():
-                sub_system_rc_coords = rc_coords[idxs]
-                sub_system_pc_coords = pc_coords[idxs]
-                sub_system_rc_coords_aligned = compute_optimal_coordinates(
-                    sub_system_rc_coords, sub_system_pc_coords
-                )
-                score += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
+            # for _, idxs in species_complex_mapping.items():
+            #     sub_system_rc_coords = rc_coords[idxs]
+            #     sub_system_pc_coords = pc_coords[idxs]
+            #     sub_system_rc_coords_aligned = compute_optimal_coordinates(
+            #         sub_system_rc_coords, sub_system_pc_coords
+            #     )
+            #     score += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
 
             rc_coords_aligned = compute_optimal_coordinates(
                 rc_coords, pc_coords
             )
-            score += mix_param * np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
+            score += np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
+            
+            # score += np.sqrt(np.mean(np.linalg.norm((pc_coords - rc_coords_aligned)**2, axis=-1)))
+            
+            # weights = rc_conformers[0].atomic_masses
+            # score += np.sqrt(np.sum(weights * np.linalg.norm((pc_coords - rc_coords_aligned)**2, axis=-1)) / np.sum(weights))
+
+            # score += sum([
+            #     np.sqrt(np.mean((rc_coords[bond[0], :] - rc_coords[bond[1], :])**2)) for bond in bonds
+            # ])
 
             indices.append(idx)
             scores.append(score)

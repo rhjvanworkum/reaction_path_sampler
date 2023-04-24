@@ -4,6 +4,7 @@ File containing interface to Pysisyphus module
 from typing import Optional, Union, Literal, List, Any
 import subprocess
 import os
+import shutil
 import numpy as np
 import h5py
 
@@ -105,13 +106,16 @@ def pysisyphus_driver(
             f.writelines(settings_string)
 
         cmd = f'pysis settings.yaml'
-        proc = subprocess.Popen(
-            cmd.split(), 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            text=True,
-        )
-        output = proc.communicate()
+
+        try:
+            output = subprocess.check_output(
+                cmd.split(),
+                text=True,
+                timeout=5 * 60
+            )
+        except subprocess.TimeoutExpired:
+            output = ''
+            print('PYSISPHUS PROCESS TIMED OUT')
         
         if job == "ts_opt":
             tsopt = None
@@ -168,7 +172,7 @@ def pysisyphus_driver(
                     backward_end = f.readlines()   
 
             return output, forward_irc, backward_irc, forward_end, backward_end
-        
+    
     return execute_pysisyphus()
 
 if __name__ == "__main__":

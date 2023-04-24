@@ -2,4 +2,4 @@
 
 source env.sh
 
-python -u main.py systems/new_test.yaml
+python -u main.py systems/latest_test.yaml

@@ -92,7 +92,7 @@ def main(settings: Dict[str, Any]) -> None:
         rc_conformers=rc_conformers,
         pc_conformers=pc_conformers,
         species_complex_mapping=species_complex_mapping,
-        # bonds=bond_rearr.all,
+        bonds=bond_rearr.all,
         settings=settings
     )
     print(f'Selecting most promising Reactant-Product Complex pairs took: {time.time() - t}\n\n')
@@ -109,6 +109,17 @@ def main(settings: Dict[str, Any]) -> None:
         rc_conformer = rc_conformers[opt_idx[0]]
         pc_conformer = pc_conformers[opt_idx[1]]
         rc_conformer._coordinates = compute_optimal_coordinates(rc_conformer.coordinates, pc_conformer.coordinates)
+        
+        # new_coords = np.zeros(rc_conformer.coordinates.shape)
+        # for _, idxs in species_complex_mapping.items():
+        #     sub_system_rc_coords = rc_conformer.coordinates[idxs]
+        #     sub_system_pc_coords = pc_conformer.coordinates[idxs]
+        #     sub_system_rc_coords_aligned = compute_optimal_coordinates(
+        #         sub_system_rc_coords, sub_system_pc_coords
+        #     )
+        #     new_coords[idxs] = sub_system_rc_coords_aligned
+        # rc_conformer._coordinates = new_coords
+        
         atoms_to_xyz_file(rc_conformer.atoms, f'{output_dir}/{idx}/selected_rc.xyz')
         atoms_to_xyz_file(pc_conformer.atoms, f'{output_dir}/{idx}/selected_pc.xyz')
         print(f'aligning complexes: {time.time() - t}')
@@ -139,7 +150,7 @@ def main(settings: Dict[str, Any]) -> None:
         if os.path.exists(f'{output_dir}/{idx}/geodesic_path.trj'):
             os.remove(f'{output_dir}/{idx}/geodesic_path.trj')
         print(f'TS search time: {time.time() - t}, imaginary freq: {imaginary_freq}')
-        
+
         write_output_file(output, f'{output_dir}/{idx}/ts_search.out')
         write_output_file(cos_final_traj, f'{output_dir}/{idx}/cos_final_traj.xyz')
 

@@ -69,12 +69,12 @@ def compute_isomorphism_score(args) -> float:
         )
         rmsd += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
 
-    rc_coords = coords1
-    pc_coords = coords2
-    rc_coords_aligned = compute_optimal_coordinates(
-        rc_coords, pc_coords
-    )
-    rmsd += np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
+    # rc_coords = coords1
+    # pc_coords = coords2
+    # rc_coords_aligned = compute_optimal_coordinates(
+    #     rc_coords, pc_coords
+    # )
+    # rmsd += np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
     return rmsd
 
 def select_ideal_isomorphism(

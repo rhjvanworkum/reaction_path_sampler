@@ -2,12 +2,12 @@
 ### 1. GENERAL SETTINGS
 ###
 
-output_dir: './scratch/test3'
+output_dir: './scratch/9_test'
 product_smiles:
-- CC1C=CC(C)C(C)(C)C1
+- CC1CCC=CC1O
 reactant_smiles:
-- '[H]C(C)=CC=C([H])C'
-- '[H]C([H])=C(C)C'
+- '[H]C([H])=CC=C([H])O'
+- '[H]C([H])=C([H])C'
 solvent: "Methanol"
 
 mix_param: 0.8
@@ -20,11 +20,12 @@ allow_same_connectivity: True
 
 xtb_n_cores: 2
 xtb_n_cores_metadyn: 2
-n_processes: 10
+n_processes: 16
 
 xtb_method: "2"
 num_complex_sphere_points: 2
 num_complex_random_rotations: 2
+num_conformers: 50
 
 
 ###
@@ -37,11 +38,11 @@ md_settings: {
   "step": 5,
   "dump": 20
 }
-md_time_per_atom: 1.0
+md_time_per_atom: 1.5
 
 # metadyn settings
 metadyn_settings: {
-  'save': 100,
+  'save': 200,
   'kpush': 1.0, 
   'alp': 0.200
 }
@@ -55,6 +56,11 @@ cavity_offset: 2.0
 
 # CREGEN settings
 use_cregen_pruning: True
+
+init_ref_energy_threshold: [0, 60.0, 60.0]
+init_rmsd_threshold: [0, 0.5, 0.5]
+init_conf_energy_threshold: [0, 1.0, 1.0]
+init_rotational_threshold: [0, 4.0, 4.0]
 
 ref_energy_threshold: [0, 6.0, 6.0]
 rmsd_threshold: [0, 0.4, 0.1]
@@ -77,5 +83,5 @@ maxiter: 15
 ### 
 ### 4. TS optimization
 ###
-min_ts_imaginary_freq: -300
+min_ts_imaginary_freq: -50
 max_ts_imaginary_freq: -1000
