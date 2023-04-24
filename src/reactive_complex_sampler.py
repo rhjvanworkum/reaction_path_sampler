@@ -82,7 +82,19 @@ class ReactiveComplexSampler:
         print(f'metadyn sampling: {time.time() - t}')
         print(f'metadyn sampled n conformers: {len(confs)}')
 
-        # 2. optimize conformers
+        # 2. prune conformer set
+        t = time.time()
+        confs = self._prune_conformers(
+            complex=complex,
+            conformers=confs,
+            use_graph_pruning=True,
+            use_cregen_pruning=False,
+            # init="init_"
+        )
+        print(f'pruning conformers: {time.time() - t}')
+        print(f'conformers after pruning: {len(confs)}\n\n')
+
+        # 3. optimize conformers
         t = time.time()
         confs = self._optimize_conformers(
             complex=complex,
@@ -90,11 +102,13 @@ class ReactiveComplexSampler:
         )
         print(f'optimizing conformers: {time.time() - t}')
 
-        # 3. prune conformer set
+        # 4. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
             complex=complex,
-            conformers=confs
+            conformers=confs,
+            use_graph_pruning=True,
+            use_cregen_pruning=self.settings['use_cregen_pruning']
         )
         print(f'pruning conformers: {time.time() - t}')
         print(f'conformers after pruning: {len(confs)}\n\n')
@@ -197,34 +211,40 @@ class ReactiveComplexSampler:
         self,
         complex: Molecule,
         conformers: List[str],
+        use_graph_pruning: bool,
+        use_cregen_pruning: bool,
+        init: str = ""
     ) -> List[str]:
         """
         Prunes a set of conformers using CREST CREGEN
         """
-        if self.settings["use_cregen_pruning"]:
+        if use_cregen_pruning:
             conformers = crest_driver(
                 ref_structure=complex.to_xyz_string(),
                 ensemble_structures='\n'.join(conformers),
-                ref_energy_threshold=self.settings["ref_energy_threshold"][len(self.smiles_strings)],
-                rmsd_threshold=self.settings["rmsd_threshold"][len(self.smiles_strings)],
-                conf_energy_threshold=self.settings["conf_energy_threshold"][len(self.smiles_strings)],
-                rotational_threshold=self.settings["rotational_threshold"][len(self.smiles_strings)],
+                ref_energy_threshold=self.settings[f"{init}ref_energy_threshold"][len(self.smiles_strings)],
+                rmsd_threshold=self.settings[f"{init}rmsd_threshold"][len(self.smiles_strings)],
+                conf_energy_threshold=self.settings[f"{init}conf_energy_threshold"][len(self.smiles_strings)],
+                rotational_threshold=self.settings[f"{init}rotational_threshold"][len(self.smiles_strings)],
             )
         
-        pruned_conformers = []
-        smiles_list = [get_canonical_smiles(smi) for smi in self.smiles_strings]
-        # TODO: replace charges in a more structured way?
-        smiles_list = [smi if len(smi) > 6 else smi.replace('+', '').replace('-', '')  for smi in smiles_list]
+        if use_graph_pruning:
+            pruned_conformers = []
+            smiles_list = [get_canonical_smiles(smi) for smi in self.smiles_strings]
+            
+            # TODO: replace charges in a more structured way?
+            # smiles_list = [smi if len(smi) > 6 else smi.replace('+', '').replace('-', '')  for smi in smiles_list]
+            
+            for conformer in conformers:
+                try:
+                    conf_smiles_list = get_canonical_smiles_from_xyz_string_ob(conformer)
+                    if set(conf_smiles_list) == set(smiles_list):
+                        pruned_conformers.append(conformer)
+                except Exception as e:
+                    continue
+            conformers = pruned_conformers
         
-        for conformer in conformers:
-            try:
-                conf_smiles_list = get_canonical_smiles_from_xyz_string_ob(conformer)
-                if set(conf_smiles_list) == set(smiles_list):
-                    pruned_conformers.append(conformer)
-            except Exception as e:
-                continue
-        
-        return pruned_conformers
+        return conformers
 
 
 if __name__ == "__main__":

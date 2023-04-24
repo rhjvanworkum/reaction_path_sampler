@@ -105,6 +105,7 @@ def set_autode_settings(settings):
     ade.Config.n_cores = settings['xtb_n_cores']
     ade.Config.XTB.path = os.environ["XTB_PATH"]
     ade.Config.rmsd_threshold = Distance(0.3, units="Å")
+    ade.Config.num_conformers = settings["num_conformers"]
     ade.Config.num_complex_sphere_points = settings["num_complex_sphere_points"]
     ade.Config.num_complex_random_rotations = settings["num_complex_random_rotations"]
 
