@@ -44,10 +44,10 @@
 import os
 i = 0
 list = []
-for root, dirs, files in os.walk('./scratch/da_tss/'):
-    if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_tss':
+for root, dirs, files in os.walk('./scratch/da_tss_test2/'):
+    if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_tss_test2':
        
-        if root != './scratch/da_tss/':
+        if root != './scratch/da_tss_test2/':
 
             for _, _, files in os.walk(root):
                 for file in files:

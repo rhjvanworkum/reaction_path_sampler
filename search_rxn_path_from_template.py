@@ -57,38 +57,43 @@ def search_reaction_path_from_template(settings: Any) -> None:
     # TODO: write this for both reactnat -> products & product -> reacrtants
     bond_rearr = get_bond_rearrangs(products, reactants, name='test')[0]
     truncated_graph = get_truncated_active_mol_graph(graph=products.graph, active_bonds=bond_rearr.all)
-    for ts_template in get_ts_templates(folder_path=settings['template_folder_path']):
-        if not template_matches(products, truncated_graph, ts_template):
+
+    print([data["atom_label"] for _, data in truncated_graph.nodes(data=True)])
+
+    for idx, ts_template in enumerate(get_ts_templates(folder_path=settings['template_folder_path'])):
+        match, ignore_active_bonds = template_matches(products, truncated_graph, ts_template)
+        if not match:
             print('Not MATCHED')
             continue
         else:
-            print('MATCHED!!')
+            print(f'MATCHED!!  {idx}')
             mapping = get_mapping_ts_template(
-                larger_graph=truncated_graph, smaller_graph=ts_template.graph
+                larger_graph=truncated_graph, smaller_graph=ts_template.graph, ignore_active_bonds=ignore_active_bonds
             )
-            bond_constraints = {}
-            cartesian_constraints = {}
+            # bond_constraints = {}
+            # for active_bond in bond_rearr.all:
+            #     i, j = active_bond
+            #     try:
+            #         dist = ts_template.graph.edges[mapping[i], mapping[j]]["distance"]
+            #         bond_constraints[active_bond] = dist
+            #     except KeyError:
+            #         print(f"Couldn't find a mapping for bond {i}-{j}")
+            # if len(bond_constraints) != len(bond_rearr.all):
+            #     continue
 
-            for active_bond in bond_rearr.all:
-                i, j = active_bond
-                try:
-                    dist = ts_template.graph.edges[mapping[i], mapping[j]]["distance"]
-                    bond_constraints[active_bond] = dist
-                except KeyError:
-                    print(f"Couldn't find a mapping for bond {i}-{j}")
-            
+            cartesian_constraints = {}
             for node in truncated_graph.nodes:
                 try:
                     coords = ts_template.graph.nodes[mapping[node]]["cartesian"]
                     cartesian_constraints[node] = coords
                 except KeyError:
                     print(f"Couldn't find a mapping for atom {node}")
-            
-            if len(bond_constraints) != len(bond_rearr.all):
-                continue
             if len(cartesian_constraints) != len(truncated_graph.nodes):
                 continue
+            
             break
+
+    return 
 
     # generate TS guesses using matched template
     cids = AllChem.EmbedMultipleConfs(

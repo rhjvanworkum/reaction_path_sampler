@@ -3,7 +3,7 @@ import os
 import yaml
 
 if __name__ == "__main__":
-    output_folder = './scratch/da_tss/'
+    output_folder = './scratch/da_tss_test2/'
     base_settings_file = 'systems/ts_opt.yaml'
 
     if not os.path.exists(output_folder):
@@ -22,7 +22,6 @@ if __name__ == "__main__":
 
         settings['output_dir'] = output_dir
         settings['reaction_smiles'] = reaction_smiles
-        settings['n_processes'] = 10
 
         # yaml file
         yaml_file_name = f'{idx}.yaml'
