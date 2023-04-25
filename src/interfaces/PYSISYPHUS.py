@@ -113,9 +113,11 @@ def pysisyphus_driver(
                 text=True,
                 timeout=5 * 60
             )
-        except subprocess.TimeoutExpired:
+        except Exception as e:
             output = ''
-            print('PYSISPHUS PROCESS TIMED OUT')
+            print(e)
+            if isinstance(e, subprocess.TimeoutExpired):
+                print('PYSISPHUS PROCESS TIMED OUT')
         
         if job == "ts_opt":
             tsopt = None

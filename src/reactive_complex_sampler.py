@@ -82,14 +82,19 @@ class ReactiveComplexSampler:
         print(f'metadyn sampling: {time.time() - t}')
         print(f'metadyn sampled n conformers: {len(confs)}')
 
+        if len(confs) < 10:
+            confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_tight")
+            print(f'metadyn sampling: {time.time() - t}')
+            print(f'metadyn sampled n conformers: {len(confs)}')
+
         # 2. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
             complex=complex,
             conformers=confs,
-            use_graph_pruning=True,
-            use_cregen_pruning=False,
-            # init="init_"
+            use_graph_pruning=False,
+            use_cregen_pruning=True,
+            init="init_"
         )
         print(f'pruning conformers: {time.time() - t}')
         print(f'conformers after pruning: {len(confs)}\n\n')
@@ -160,7 +165,7 @@ class ReactiveComplexSampler:
 
         return complexes
     
-    def _sample_metadynamics_conformers(self, complex: Molecule) -> List[str]:
+    def _sample_metadynamics_conformers(self, complex: Molecule, post_fix: str = "") -> List[str]:
         """
         Sample conformers of a Molecule object complex.
         Returns a list of xyz strings containing conformers
@@ -171,7 +176,8 @@ class ReactiveComplexSampler:
         xcontrol_settings += get_metadynamics_constraint(
             complex,
             self.settings,
-            len(self.smiles_strings)
+            len(self.smiles_strings),
+            post_fix=post_fix
         )
 
         structures, _ = xtb_driver(

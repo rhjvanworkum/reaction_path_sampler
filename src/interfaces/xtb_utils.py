@@ -40,10 +40,11 @@ def get_wall_constraint(
 def get_metadynamics_constraint(
     mol: Molecule,
     settings: Dict[str, Any],
-    n_mols: int
+    n_mols: int,
+    post_fix: str = ""
 ):
     string = "$md\n"
-    for k, v in settings[f"md_settings"].items():
+    for k, v in settings[f"md_settings{post_fix}"].items():
         string += f"  {k}={v}\n"
     string += f"  time: {mol.n_atoms * n_mols * settings[f'md_time_per_atom']}\n"
 

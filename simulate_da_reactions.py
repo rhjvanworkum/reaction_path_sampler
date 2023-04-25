@@ -7,7 +7,7 @@ import os
 
 
 if __name__ == "__main__":
-    output_folder = './scratch/da_reaction_cores_5/'
+    output_folder = './scratch/da_reaction_cores_6/'
     base_settings_file = 'systems/latest_test.yaml'
 
     if not os.path.exists(output_folder):
