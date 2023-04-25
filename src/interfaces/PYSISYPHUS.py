@@ -65,6 +65,7 @@ def pysisyphus_driver(
     mult: int,
     job: Literal["ts_opt", "ts_search", "irc"],
     n_cores: int = 2,
+    n_mins_timeout: int = 5,
     solvent: Optional[str] = None
 ):
     if mult != 1:
@@ -111,7 +112,7 @@ def pysisyphus_driver(
             output = subprocess.check_output(
                 cmd.split(),
                 text=True,
-                timeout=5 * 60
+                timeout=n_mins_timeout * 60
             )
         except Exception as e:
             output = ''

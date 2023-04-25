@@ -32,7 +32,7 @@ def write_output_file(variable, name):
             f.writelines(variable)
 
 
-def main(settings: Dict[str, Any]) -> None:
+def search_reaction_path(settings: Dict[str, Any]) -> None:
     output_dir = settings["output_dir"]
     reactant_smiles = settings["reactant_smiles"]
     product_smiles = settings["product_smiles"]
@@ -272,4 +272,4 @@ if __name__ == "__main__":
     with open(args.settings_file_path, "r") as f:
         settings = yaml.load(f, Loader=yaml.Loader)
 
-    main(settings)
+    search_reaction_path(settings)

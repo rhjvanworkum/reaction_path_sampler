@@ -37,6 +37,12 @@ def get_wall_constraint(
     string += "  sphere:%f, all\n" % wall_radius
     return string
 
+def get_fixing_constraints(atom_idxs: List[int]) -> str:
+    string  = "$fix\n"
+    string += f"  atoms: {','.join(atom_idxs)}\n"
+    string += "$end\n"
+    return string
+
 def get_metadynamics_constraint(
     mol: Molecule,
     settings: Dict[str, Any],
