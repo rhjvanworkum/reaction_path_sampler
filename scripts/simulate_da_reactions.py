@@ -7,7 +7,7 @@ import os
 
 
 if __name__ == "__main__":
-    output_folder = './scratch/da_reaction_cores_6/'
+    output_folder = './scratch/da_reaction_cores_new_new/'
     base_settings_file = 'systems/latest_test.yaml'
 
     if not os.path.exists(output_folder):
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     with open(base_settings_file, "r") as f:
         settings = yaml.load(f, Loader=yaml.Loader)
 
-    with open('da_reaction_cores.txt', 'r') as f:
+    with open('data/da_reaction_cores_new_new.txt', 'r') as f:
         reaction_smiles_list = [line.replace('\n', '') for line in f.readlines()]
 
     for idx, reaction_smiles in enumerate(reaction_smiles_list):
@@ -41,7 +41,7 @@ if __name__ == "__main__":
             f.writelines([
                 '#!/bin/bash \n',
                 'source env.sh \n',
-                f'python -u main.py {os.path.join(output_folder, yaml_file_name)}'
+                f'python -u search_rxn_path.py {os.path.join(output_folder, yaml_file_name)}'
             ])
 
         # execute

@@ -1,28 +1,25 @@
-# import numpy as np
-# import math
+""" actual test area """
+# import itertools
 
-# all_args = np.arange(2008)
-# n_processes = 7
-# chunk_size = math.ceil(len(all_args) / n_processes)
-# print(chunk_size)
-# args = [all_args[i:i+chunk_size] for i in np.arange(0, len(all_args), chunk_size)]
-# print(np.arange(0, len(all_args), chunk_size))
+# nodes = [1, 2, 3, 4]
+# for comb in itertools.combinations(nodes, 2):
+#     print(comb)
 
-# print([0, 1, 2, 3, 4][2:])
+
+""" Cancel SLURM jobs """
 # import os
-# for i in range(28940, 30000):
+# for i in range(31686, 32000):
 #     os.system(f'scancel {i}')
 
+""" Keep only rc's & pc's from previous job """
 # import os
 # import shutil 
-
 # for root, dirs, files in os.walk('./scratch/da_reaction_cores_4/'):
 #     if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores_4':
 #         for dir in ['0', '1', '2', '3', '4']:
 #             path = os.path.join(root, dir)
 #             if os.path.exists(path):
 #                 shutil.rmtree(path)
-
 #             for _, _, files in os.walk(root):
 #                 for file in files:
 #                     if os.path.exists(os.path.join(root, file)):
@@ -33,21 +30,23 @@
 # import os
 # i = 0
 # list = []
-# for root, dirs, files in os.walk('./scratch/da_reaction_cores_6/'):
-#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores_6':
+# for root, dirs, files in os.walk('./scratch/da_reaction_cores_new/'):
+#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores_new':
 #         if os.path.exists(os.path.join(root, 'reaction.xyz')):
 #             list.append(int(root.split('/')[-1]))
 #             i += 1
 # print(i)
 # print(sorted(list))
 
+
+""" Print which TS templates matched or not """
 import os
 i = 0
 list = []
-for root, dirs, files in os.walk('./scratch/da_tss_test2/'):
-    if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_tss_test2':
+for root, dirs, files in os.walk('./scratch/da_tss_test_new1/'):
+    if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_tss_test_new1':
        
-        if root != './scratch/da_tss_test2/':
+        if root != './scratch/da_tss_test_new1/':
 
             for _, _, files in os.walk(root):
                 for file in files:

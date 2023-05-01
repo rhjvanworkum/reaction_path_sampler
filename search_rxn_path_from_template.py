@@ -36,6 +36,7 @@ def search_reaction_path_from_template(settings: Any) -> None:
 
     # parse reaction SMILES
     if settings['reaction_smiles'] is not None:
+        print(settings['reaction_smiles'])
         reactants, products = settings['reaction_smiles'].split('>>')
         reactant_smiles = reactants.split('.')
         product_smiles = products.split('.')
@@ -58,15 +59,13 @@ def search_reaction_path_from_template(settings: Any) -> None:
     bond_rearr = get_bond_rearrangs(products, reactants, name='test')[0]
     truncated_graph = get_truncated_active_mol_graph(graph=products.graph, active_bonds=bond_rearr.all)
 
-    print([data["atom_label"] for _, data in truncated_graph.nodes(data=True)])
-
-    for idx, ts_template in enumerate(get_ts_templates(folder_path=settings['template_folder_path'])):
+    for ts_template in get_ts_templates(folder_path=settings['template_folder_path']):
         match, ignore_active_bonds = template_matches(products, truncated_graph, ts_template)
         if not match:
             print('Not MATCHED')
             continue
         else:
-            print(f'MATCHED!!  {idx}')
+            print(f'MATCHED!!  {ts_template._filename}')
             mapping = get_mapping_ts_template(
                 larger_graph=truncated_graph, smaller_graph=ts_template.graph, ignore_active_bonds=ignore_active_bonds
             )

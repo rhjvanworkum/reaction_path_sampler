@@ -3,7 +3,8 @@ import os
 import yaml
 
 if __name__ == "__main__":
-    output_folder = './scratch/da_tss_test2/'
+    output_folder = './scratch/da_tss_test_new1/'
+    template_folder_path = './scratch/templates/da_cores_new/'
     base_settings_file = 'systems/ts_opt.yaml'
 
     if not os.path.exists(output_folder):
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     with open(base_settings_file, "r") as f:
         settings = yaml.load(f, Loader=yaml.Loader)
 
-    df = pd.read_csv('data/test_da_reactions.csv')
+    df = pd.read_csv('data/test_da_reactions_new.csv')
     reaction_smiles_list = df['reaction_smiles'].values
 
     for idx, reaction_smiles in enumerate(reaction_smiles_list):
@@ -21,6 +22,7 @@ if __name__ == "__main__":
             os.makedirs(output_dir)
 
         settings['output_dir'] = output_dir
+        settings['template_folder_path'] = template_folder_path
         settings['reaction_smiles'] = reaction_smiles
 
         # yaml file
