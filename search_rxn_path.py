@@ -60,6 +60,8 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
     )     
     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(rc_complex, pc_complex)
 
+    print(bond_rearr, reaction_isomorphisms, isomorphism_idx)
+
     # select best reaction isomorphism & remap reaction
     t = time.time()
     print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')

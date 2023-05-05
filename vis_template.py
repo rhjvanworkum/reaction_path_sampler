@@ -3,7 +3,9 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import yaml
 
+from src.reaction_path.complexes import generate_reactant_product_complexes
 from src.ts_template import TStemplate
 
 from autode.bond_rearrangement import get_bond_rearrangs
@@ -16,11 +18,33 @@ from autode.species import Complex
 
 
 if __name__ == "__main__":
-    img_name = 'test.png'
+    img_name = 'test2.png'
+
+    """ RC's / PC's """
+    with open('./systems/ac.yaml', "r") as f:
+        settings = yaml.load(f, Loader=yaml.Loader)
+    output_dir = settings["output_dir"]
+    reactant_smiles = settings["reactant_smiles"]
+    product_smiles = settings["product_smiles"]
+    solvent = settings["solvent"]
+    
+    rc_complex, _rc_conformers, rc_n_species, rc_species_complex_mapping = generate_reactant_product_complexes(
+        reactant_smiles, 
+        solvent, 
+        settings, 
+        f'{output_dir}/rcs.xyz'
+    )
+    pc_complex, _pc_conformers, pc_n_species, pc_species_complex_mapping = generate_reactant_product_complexes(
+        product_smiles, 
+        solvent, 
+        settings, 
+        f'{output_dir}/pcs.xyz'
+    )   
+    graph = pc_complex.graph
 
     """ Template """
-    template = TStemplate(filename="./scratch/templates/da_cores_new/template94.txt")
-    graph = template.graph
+    # template = TStemplate(filename="./scratch/templates/da_cores_new/template94.txt")
+    # graph = template.graph
 
     """ Reaction """
     # df = pd.read_csv('./data/test_da_reactions_new.csv')
@@ -60,13 +84,14 @@ if __name__ == "__main__":
 
     for idx, data in graph.nodes(data=True):
         atoms_dict[data['atom_label']].append(idx)
-        pos_dict[idx] = data['cartesian'][:2]
+        # pos_dict[idx] = data['cartesian'][:2]
+
+    l = nx.spring_layout(graph)
 
     for key, values in atoms_dict.items():
         nx.draw_networkx_nodes(
             graph,
-            # nx.spectral_layout(graph),
-            pos_dict,
+            l,
             nodelist=values,
             node_color=(
                 float(color_df[color_df['atom'] == key]['R'].values[0]) / 255,
@@ -98,8 +123,7 @@ if __name__ == "__main__":
     for key, values in bonds_dict.items():
         nx.draw_networkx_edges(
             graph,
-            # nx.spectral_layout(graph),
-            pos_dict,
+            l,
             edgelist=values,
             edge_color=(1,1,1),
             style=style_dict[key]

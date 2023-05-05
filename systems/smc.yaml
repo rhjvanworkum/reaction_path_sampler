@@ -2,12 +2,14 @@
 ### 1. GENERAL SETTINGS
 ###
 
-output_dir: './scratch/new_61_test_test'
+output_dir: './scratch/smc_oa_test'
+
 product_smiles:
-- CC1C=CC(C)(C)C(C)(Br)C1(C)Br
+- "[Pd](Br)(c1ccccc1)([P](c1ccccc1)(c1ccccc1)(c1ccccc1))[P](c1ccccc1)(c1ccccc1)(c1ccccc1)"
 reactant_smiles:
-- '[H]C(C)=CC=C(C)C'
-- CC(Br)=C(C)Br
+- "[Pd]([P](c1ccccc1)(c1ccccc1)(c1ccccc1))[P](c1ccccc1)(c1ccccc1)(c1ccccc1)"
+- "c1cccc(Br)c1"
+
 solvent: "Methanol"
 
 mix_param: 0.8
@@ -38,7 +40,7 @@ md_settings: {
   "step": 5,
   "dump": 20
 }
-md_time_per_atom: 1.5
+md_time_per_atom: 0.5
 md_settings_tight: {
   "shake": 0,
   "step": 2,

@@ -2,10 +2,10 @@ import os
 import shutil
 
 if __name__ == "__main__":
-    reaction_cores_path = "./data/da_reaction_cores_new.txt"
-    path = "./scratch/da_reaction_cores_new/"
-    name = "da_reaction_cores_new"
-    template_dir = './scratch/templates/da_cores_new/'
+    reaction_cores_path = "./data/da_reaction_cores_new_new.txt"
+    path = "./scratch/da_reaction_cores_new_new/"
+    name = "da_reaction_cores_new_new"
+    template_dir = './scratch/templates/da_cores_new_new/'
 
     with open(reaction_cores_path, 'r') as f:
         reaction_smiles_list = [line.replace('\n', '') for line in f.readlines()]
@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     successfull_reaction_smiles = [reaction_smiles_list[i] for i in list]
 
-    with open('succesfull_da_reaction_cores_new.txt', 'w') as f:
+    with open('succesfull_da_reaction_cores_new_new.txt', 'w') as f:
         f.writelines("\n".join(successfull_reaction_smiles))
 
 

@@ -73,7 +73,7 @@ def pysisyphus_driver(
 
     settings_string = construct_geometry_block(
         files=[file.split('/')[-1] for file in geometry_files],
-        type="cart"
+        type="dlc"
     )
     settings_string += construct_calculation_block(
         charge=charge,
@@ -125,6 +125,10 @@ def pysisyphus_driver(
             if os.path.exists('ts_opt.xyz'):
                 with open('ts_opt.xyz', 'r') as f:
                     tsopt = f.readlines()
+            else:
+                if os.path.exists('ts_final_geometry.xyz'):
+                    with open('ts_final_geometry.xyz', 'r') as f:
+                        tsopt = f.readlines()
 
             imaginary_freq = None
             if os.path.exists('ts_final_hessian.h5'):

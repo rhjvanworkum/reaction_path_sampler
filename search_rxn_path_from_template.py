@@ -25,7 +25,7 @@ from src.reaction_path.reaction_ends import check_reaction_ends
 
 from src.ts_template import get_ts_templates
 from src.utils import autode_conf_to_xyz_string, get_canonical_smiles
-from src.xyz2mol import get_canonical_smiles_from_xyz_string_ob
+from src.xyz2mol import canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
 
 
 def search_reaction_path_from_template(settings: Any) -> None:
@@ -92,8 +92,6 @@ def search_reaction_path_from_template(settings: Any) -> None:
             
             break
 
-    return 
-
     # generate TS guesses using matched template
     cids = AllChem.EmbedMultipleConfs(
         mol=products.rdkit_mol_obj,
@@ -104,20 +102,16 @@ def search_reaction_path_from_template(settings: Any) -> None:
         maxAttempts=1000,
         pruneRmsThresh=1,
         ignoreSmoothingFailures=True,
-        useRandomCoords=True,
+        useRandomCoords=False,
     )
-    i = 0
-    for id in cids:
-        print(id)
-        i += 1
-    print(i)
+    print(len(cids))
 
-    for conformer_idx in range(settings['n_confs']):
+    for conformer_idx, cid in enumerate(cids[:settings['n_confs']]):
         if not os.path.exists(f'{output_dir}/{conformer_idx}'):
             os.makedirs(f'{output_dir}/{conformer_idx}/')
 
         """ 1. Do constrained optimization of the TS guess """
-        atoms = atoms_from_rdkit_mol(products.rdkit_mol_obj, cids[conformer_idx])
+        atoms = atoms_from_rdkit_mol(products.rdkit_mol_obj, cid)
         conf = Conformer(atoms=atoms)
         cc = autode_conf_to_xyz_string(conf)
         write_output_file(cc, f'{output_dir}/{conformer_idx}/pre_opt_conf.xyz')
@@ -167,32 +161,43 @@ def search_reaction_path_from_template(settings: Any) -> None:
                     if None not in [backward_end, forward_end]:
                         write_output_file(backward_end + ["\n"] + tsopt + ["\n"] + forward_end, f'{output_dir}/{conformer_idx}/reaction.xyz')
                         
+                        # try:
+                        true_rc_smi_list = [get_canonical_smiles(smi) for smi in reactant_smiles]
+                        true_pc_smi_list = [get_canonical_smiles(smi) for smi in product_smiles]
+                        
                         try:
-                            true_rc_smi_list = [get_canonical_smiles(smi) for smi in reactant_smiles]
-                            true_pc_smi_list = [get_canonical_smiles(smi) for smi in product_smiles]
                             pred_rc_smi_list = get_canonical_smiles_from_xyz_string_ob("".join(backward_end))
                             pred_pc_smi_list = get_canonical_smiles_from_xyz_string_ob("".join(forward_end))
+                        except:
+                            pred_rc_smi_list = canonical_smiles_from_xyz_string(
+                                xyz_string="".join(backward_end),
+                                charge=products.charge
+                            )
+                            pred_pc_smi_list = canonical_smiles_from_xyz_string(
+                                xyz_string="".join(forward_end),
+                                charge=products.charge
+                            )
 
-                            print(true_rc_smi_list, pred_rc_smi_list)
-                            print(true_pc_smi_list, pred_pc_smi_list)
-                            print('\n\n')
+                        print(true_rc_smi_list, pred_rc_smi_list)
+                        print(true_pc_smi_list, pred_pc_smi_list)
+                        print('\n\n')
 
-                            if check_reaction_ends(
-                                true_rc_smi_list,
-                                true_pc_smi_list,
-                                pred_rc_smi_list,
-                                pred_pc_smi_list,
-                            ):
-                                # also save tsopt + reaction + irc path
-                                shutil.copy2(f'{output_dir}/{conformer_idx}/ts_opt.xyz', f'{output_dir}/ts_opt.xyz')
-                                shutil.copy2(f'{output_dir}/{conformer_idx}/reaction.xyz', f'{output_dir}/reaction.xyz')
-                                shutil.copy2(f'{output_dir}/{conformer_idx}/irc_path.xyz', f'{output_dir}/irc_path.xyz')
-                                
-                                print('finshed reaction \n\n')
-                                break  
+                        if check_reaction_ends(
+                            true_rc_smi_list,
+                            true_pc_smi_list,
+                            pred_rc_smi_list,
+                            pred_pc_smi_list,
+                        ):
+                            # also save tsopt + reaction + irc path
+                            shutil.copy2(f'{output_dir}/{conformer_idx}/ts_opt.xyz', f'{output_dir}/ts_opt.xyz')
+                            shutil.copy2(f'{output_dir}/{conformer_idx}/reaction.xyz', f'{output_dir}/reaction.xyz')
+                            shutil.copy2(f'{output_dir}/{conformer_idx}/irc_path.xyz', f'{output_dir}/irc_path.xyz')
+                            
+                            print('finshed reaction \n\n')
+                            break  
 
-                        except Exception as e:
-                            print('Failed to retrieve SMILES from IRC ends \n\n')
+                        # except Exception as e:
+                        #     print('Failed to retrieve SMILES from IRC ends \n\n')
 
                     else:
                         print("IRC end opt failed\n\n")

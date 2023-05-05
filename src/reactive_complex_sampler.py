@@ -112,7 +112,7 @@ class ReactiveComplexSampler:
         confs = self._prune_conformers(
             complex=complex,
             conformers=confs,
-            use_graph_pruning=True,
+            use_graph_pruning=False,
             use_cregen_pruning=self.settings['use_cregen_pruning']
         )
         print(f'pruning conformers: {time.time() - t}')

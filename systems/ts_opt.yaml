@@ -4,7 +4,7 @@ reaction_smiles: "C=CC(=C)c1ccccc1.C=CC=O>>O=CC1CCC=C(c2ccccc2)C1"
 solvent: "Methanol"
 
 
-n_confs: 1
+n_confs: 4
 
 n_mins_timeout: 15
 

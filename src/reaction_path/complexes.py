@@ -6,9 +6,8 @@ Each reaction path needs a reactant + product complex
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import math
-from typing import Callable, Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Tuple, Any
 import os
-from concurrent.futures import ProcessPoolExecutor
 import time
 from tqdm import tqdm
 
@@ -18,7 +17,7 @@ from autode.conformers.conformer import Conformer
 
 
 from src.reactive_complex_sampler import ReactiveComplexSampler
-from src.utils import autode_conf_to_xyz_string, read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
+from src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 
 
 def generate_reactant_product_complexes(
@@ -27,6 +26,16 @@ def generate_reactant_product_complexes(
     settings: Any,
     save_path: str
 ) -> Tuple[List[Conformer]]:
+    """
+    Function that creates molecular complexes from provided SMILES strings
+    :args smiles_strings: List of SMILES strings
+    :args solvent: Solvent to be used
+    :args settings: Settings object
+    :args save_path: In which folder to save conformers of the molecular complex
+
+    Returns:
+
+    """
     rps = ReactiveComplexSampler(
         smiles_strings=smiles_strings,
         solvent=solvent,
@@ -56,12 +65,6 @@ def generate_reactant_product_complexes(
         t = time.time()
         complexes = rps._sample_initial_complexes()
         print(f'time to do autode sampling: {time.time() - t}')
-
-        # for idx, complex in enumerate(complexes):
-        #     with open(f'complex_{idx}.xyz', 'w') as f:
-        #         f.writelines(autode_conf_to_xyz_string(complex))
-        # return None
-
         conformer_list = []
         conformer_xyz_list = []
         for complex in complexes:
@@ -80,33 +83,61 @@ def generate_reactant_product_complexes(
     return complex, conformer_list, len(smiles_strings), species_complex_mapping
 
 
-# def compute_score(args):
-#     idx_list, scores = [], []
-#     for arg in args:
-#         idx, rc_coords, pc_coords, species_complex_mapping, mix_param, bonds = arg
 
-#         score = 0
-#         for _, idxs in species_complex_mapping.items():
-#             sub_system_rc_coords = rc_coords[idxs]
-#             sub_system_pc_coords = pc_coords[idxs]
-#             sub_system_rc_coords_aligned = compute_optimal_coordinates(
-#                 sub_system_rc_coords, sub_system_pc_coords
-#             )
-#             score += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
 
-#         score += sum([
-#             np.sqrt(np.mean((rc_coords[bond[0], :] - rc_coords[bond[1], :])**2)) for bond in bonds
-#         ])
+def rmsd_score(
+    rc_coords: np.ndarray,
+    pc_coords: np.ndarray,
+    align_complexes: bool = True
+) -> float:
+    """
+    Returns the RMSD between reactant & product complexes
+    """
+    if align_complexes:
+        rc_coords_aligned = compute_optimal_coordinates(
+            rc_coords, pc_coords
+        )
+    else:
+        rc_coords_aligned = rc_coords
+    score = np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
+    return score
 
-#         # rc_coords_aligned = compute_optimal_coordinates(
-#         #     rc_coords, pc_coords
-#         # )
-#         # score += mix_param * np.sqrt(np.mean((pc_coords - rc_coords_aligned)**2))
+def weighted_rmsd_score(
+    rc_coords: np.ndarray,
+    pc_coords: np.ndarray,
+    align_complexes: bool = True
+) -> float:
+    pass
 
-#         idx_list.append(idx)
-#         scores.append(score)
+def active_bond_rmsd_score(
+    rc_coords: np.ndarray,
+    pc_coords: np.ndarray,
+    align_complexes: bool = True
+) -> float:
+    pass
 
-#     return idx_list, scores
+def subsystems_aligned_rmsd_score(
+    rc_coords: np.ndarray,
+    pc_coords: np.ndarray,
+    atom_subsystem_mapping: Dict[int, List[int]],
+    align_complexes: bool = True
+) -> float:
+    """
+    Returns the RMSD between a set of subsytems of the 
+    reactant & product complexes, e.g. the separate species.
+    """
+    score = 0
+    for _, idxs in atom_subsystem_mapping.items():
+        sub_system_rc_coords = rc_coords[idxs]
+        sub_system_pc_coords = pc_coords[idxs]
+        if align_complexes:
+            sub_system_rc_coords_aligned = compute_optimal_coordinates(
+                sub_system_rc_coords, sub_system_pc_coords
+            )
+        else:
+            sub_system_rc_coords_aligned = sub_system_rc_coords
+        score += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned)**2))
+    return score
 
 def select_promising_reactant_product_pairs(
     rc_conformers: List[Conformer],

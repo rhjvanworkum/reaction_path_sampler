@@ -785,7 +785,8 @@ def canonical_smiles_from_xyz_string(
         smiles = Chem.MolToSmiles(mol, isomericSmiles=isomeric_smiles)
         m = Chem.MolFromSmiles(smiles)
         smiles = Chem.MolToSmiles(m, isomericSmiles=isomeric_smiles)
-        smiles_list.append(smiles)
+        for s in smiles.split('.'):
+            smiles_list.append(s)
 
     return smiles_list
 

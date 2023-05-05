@@ -2,4 +2,4 @@
 
 source env.sh
 
-python -u main.py systems/latest_test.yaml
+python -u search_rxn_path.py systems/ac_base.yaml
