@@ -62,14 +62,6 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
     pc_complex.graph = _pc_conformers[0].graph  # in case that conformer & complex graphs don't match
     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(rc_complex, pc_complex)
 
-    # visualize graph here
-    from autode.mol_graphs import reac_graph_to_prod_graph
-    plot_networkx_mol_graph(rc_complex.graph, _rc_conformers[0].coordinates)
-    plot_networkx_mol_graph(pc_complex.graph, _pc_conformers[0].coordinates)
-    # graph = reac_graph_to_prod_graph(pc_complex.graph, bond_rearr)
-    # plot_networkx_mol_graph(graph, _rc_conformers[0].coordinates)
-
-    return
     # select best reaction isomorphism & remap reaction
     t = time.time()
     print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
@@ -84,9 +76,6 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
     )
     print(f'\nSelecting best isomorphism took: {time.time() - t}')
     
-    # TODO: remove this
-    print(isomorphism)
-
     t = time.time()
     print('remapping all conformers now ..')
     # TODO: parallelize this?
@@ -96,10 +85,6 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
     elif isomorphism_idx == 1:
         rc_conformers = _rc_conformers
         pc_conformers = [remap_conformer(conf, isomorphism) for conf in _pc_conformers]
-
-    # TODO: remove
-    atoms_to_xyz_file(rc_conformers[0].atoms, f'{output_dir}/test_rc.xyz')
-    atoms_to_xyz_file(pc_conformers[0].atoms, f'{output_dir}/test_pc.xyz')
 
     species_complex_mapping = [rc_species_complex_mapping, pc_species_complex_mapping][isomorphism_idx]
     for key, value in species_complex_mapping.items():
