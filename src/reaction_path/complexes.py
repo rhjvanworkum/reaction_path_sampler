@@ -14,11 +14,12 @@ from src.reactive_complex_sampler import ReactiveComplexSampler
 from src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 
 
-def generate_reactant_product_complexes(
+def generate_reaction_complexes(
     smiles_strings: List[str],
     solvent: str,
     settings: Any,
-    save_path: str
+    save_path: str,
+    compute_conformers: bool = False
 ) -> Tuple[List[Conformer]]:
     """
     Function that creates molecular complexes from provided SMILES strings
@@ -47,35 +48,40 @@ def generate_reactant_product_complexes(
             species_complex_mapping[idx] = np.arange(tot_atoms, tot_atoms + len(mol.atoms))
             tot_atoms += len(mol.atoms)
 
-    if os.path.exists(save_path):
-        conformers, _ = read_trajectory_file(save_path)
-        conformer_list = [Conformer(
-            atoms=xyz_string_to_autode_atoms(structure), 
-            charge=complex.charge, 
-            mult=complex.mult
-        ) for structure in conformers]
+    if compute_conformers:
+        if os.path.exists(save_path):
+            conformers, _ = read_trajectory_file(save_path)
+            conformer_list = [Conformer(
+                atoms=xyz_string_to_autode_atoms(structure), 
+                charge=complex.charge, 
+                mult=complex.mult
+            ) for structure in conformers]
 
+        else:
+            t = time.time()
+            complexes = rps._sample_initial_complexes(complex)
+
+            print(f'time to do autode sampling: {time.time() - t}')
+            conformer_list = []
+            conformer_xyz_list = []
+            for complex in complexes:
+                conformers = rps.sample_reaction_complexes(complex=complex)
+                for conformer in conformers:
+                    conformer_xyz_list.append(conformer)
+                    conformer_list.append(Conformer(
+                        atoms=xyz_string_to_autode_atoms(conformer), 
+                        charge=complex.charge, 
+                        mult=complex.mult
+                    ))
+
+            with open(save_path, 'w') as f:
+                f.writelines(remove_whitespaces_from_xyz_strings(conformer_xyz_list))
+
+        return complex, conformer_list, len(smiles_strings), species_complex_mapping
+    
     else:
-        t = time.time()
-        complexes = rps._sample_initial_complexes(complex)
 
-        print(f'time to do autode sampling: {time.time() - t}')
-        conformer_list = []
-        conformer_xyz_list = []
-        for complex in complexes:
-            conformers = rps.sample_reaction_complexes(complex=complex)
-            for conformer in conformers:
-                conformer_xyz_list.append(conformer)
-                conformer_list.append(Conformer(
-                    atoms=xyz_string_to_autode_atoms(conformer), 
-                    charge=complex.charge, 
-                    mult=complex.mult
-                ))
-
-        with open(save_path, 'w') as f:
-            f.writelines(remove_whitespaces_from_xyz_strings(conformer_xyz_list))
-
-    return complex, conformer_list, len(smiles_strings), species_complex_mapping
+        return complex, len(smiles_strings), species_complex_mapping
 
 
 

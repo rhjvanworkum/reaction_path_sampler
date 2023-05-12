@@ -53,132 +53,53 @@
 
 
 
-from typing import List
+from typing import List, Optional
 import os
+import yaml
 import numpy as np
+import autode as ade
+from autode.input_output import atoms_to_xyz_file
+from openbabel import openbabel as ob
+from lewis import Table_generator, mol_write
+from geodesic_interpolate.fileio import write_xyz
+from src.reaction_path.complexes import compute_optimal_coordinates, generate_reaction_complexes
+from src.reaction_path.path_interpolation import interpolate_geodesic
+from src.reaction_path.reaction_graph import map_reaction_complexes
 
-def xyz_parse(input,read_types=False):
+from src.reactive_complex_sampler import ReactiveComplexSampler
+from src.utils import set_autode_settings
 
-    # Commands for reading only the coordinates and the elements
-    if read_types is False:
-        
-        # Iterate over the remainder of contents and read the
-        # geometry and elements into variable. Note that the
-        # first two lines are considered a header
-        with open(input,'r') as f:
-            for lc,lines in enumerate(f):
-                fields=lines.split()
-
-                # Parse header
-                if lc == 0:
-                    if len(fields) < 1:
-                        print("ERROR in xyz_parse: {} is missing atom number information".format(input))
-                        quit()
-                    else:
-                        N_atoms = int(fields[0])
-                        Elements = ["X"]*N_atoms
-                        Geometry = np.zeros([N_atoms,3])
-                        count = 0
-
-                # Parse body
-                if lc > 1:
-
-                    # Skip empty lines
-                    if len(fields) == 0:
-                        continue            
-
-                    # Write geometry containing lines to variable
-                    if len(fields) > 3:
-
-                        # Consistency check
-                        if count == N_atoms:
-                            print("ERROR in xyz_parse: {} has more coordinates than indicated by the header.".format(input))
-                            quit()
-
-                        # Parse commands
-                        else:
-                            Elements[count]=fields[0]
-                            Geometry[count,:]=np.array([float(fields[1]),float(fields[2]),float(fields[3])])
-                            count = count + 1
-
-        # Consistency check
-        if count != len(Elements):
-            print("ERROR in xyz_parse: {} has less coordinates than indicated by the header.".format(input))
-
-        return Elements,Geometry
-
-    # Commands for reading the atomtypes from the fourth column
-    if read_types is True:
-
-        # Iterate over the remainder of contents and read the
-        # geometry and elements into variable. Note that the
-        # first two lines are considered a header
-        with open(input,'r') as f:
-            for lc,lines in enumerate(f):
-                fields=lines.split()
-
-                # Parse header
-                if lc == 0:
-                    if len(fields) < 1:
-                        print("ERROR in xyz_parse: {} is missing atom number information".format(input))
-                        quit()
-                    else:
-                        N_atoms = int(fields[0])
-                        Elements = ["X"]*N_atoms
-                        Geometry = np.zeros([N_atoms,3])
-                        Atom_types = [None]*N_atoms
-                        count = 0
-
-                # Parse body
-                if lc > 1:
-
-                    # Skip empty lines
-                    if len(fields) == 0:
-                        continue            
-
-                    # Write geometry containing lines to variable
-                    if len(fields) > 3:
-
-                        # Consistency check
-                        if count == N_atoms:
-                            print("ERROR in xyz_parse: {} has more coordinates than indicated by the header.".format(input))
-                            quit()
-
-                        # Parse commands
-                        else:
-                            Elements[count] = fields[0]
-                            Geometry[count,:] = np.array([float(fields[1]),float(fields[2]),float(fields[3])])
-                            if len(fields) > 4:
-                                Atom_types[count] = fields[4]
-                            count = count + 1
-
-        # Consistency check
-        if count != len(Elements):
-            print("ERROR in xyz_parse: {} has less coordinates than indicated by the header.".format(input))
-
-        return Elements,Geometry,Atom_types
-
-def ob_geo_opt(
-    E,
-    G,
-    adj_mat,
+def compute_ff_optimized_coords(
+    conformer: ade.Species,
+    adj_mat: Optional[np.array] = None,
     ff_name: str = 'UFF', 
     fixed_atoms: List[int] = [], 
     n_steps: int = 500
 ) -> None:
-    import openbabel as ob
+    # create a mol file object for ob
+    mol_file_name = 'obff.mol'
 
-    # load in openbabel modules
+    if adj_mat is None:
+        adj_mat = Table_generator(
+            Elements=[a.atomic_symbol for a in conformer.atoms],
+            Geometry=conformer.coordinates
+        )
+
+    mol_write(
+        name=mol_file_name,
+        elements=[a.atomic_symbol for a in conformer.atoms],
+        geo=conformer.coordinates,
+        adj_mat=adj_mat,
+        q=0,
+        append_opt=False
+    )
+
+    # load in ob mol
     conv = ob.OBConversion()
     conv.SetInAndOutFormats('mol','xyz')
-    mol = ob.OBMol()
+    mol = ob.OBMol()    
+    conv.ReadFile(mol, mol_file_name)
 
-    # create a mol file for geo_opt
-    opt_file = 'obff.mol'
-    # mol_write(opt_file,E,G,adj_mat,q=q,append_opt=False)
-    
-    conv.ReadFile(mol,opt_file)
-    
     # Define constraints  
     constraints= ob.OBFFConstraints()
     if len(fixed_atoms) > 0:
@@ -193,25 +114,86 @@ def ob_geo_opt(
     # Do a conjugate gradient minimiazation
     forcefield.ConjugateGradients(n_steps)
     forcefield.GetCoordinates(mol) 
-    
-    # write into xyz file
-    conv.WriteFile(mol,'result.xyz')
-    
-    # parse output xyz file
-    element, geo = xyz_parse("result.xyz")
 
-    # remove mol and xyz file
+    # cleanup
     try:
-        os.remove(opt_file)
-        os.remove('result.xyz')
+        os.remove(mol_file_name)
     except:
         pass
 
-    return geo
+    # read coordinates
+    coordinates = []
+    for atom in ob.OBMolAtomIter(mol):
+        coordinates.append([atom.GetX(), atom.GetY(), atom.GetZ()])
 
+    return np.array(coordinates)
 
 
 if __name__ == "__main__":
     # 1. get product conformer
+    with open('./systems/ac_base.yaml', "r") as f:
+        settings = yaml.load(f, Loader=yaml.Loader)
 
-    # so you wanna take the product elements & geometry but use the adjacency_matrix of the reactants
+    # set autode settings
+    set_autode_settings(settings)
+
+    output_dir = settings["output_dir"]
+    reactant_smiles = settings["reactant_smiles"]
+    product_smiles = settings["product_smiles"]
+    solvent = settings["solvent"]
+
+    complex, _, pc_species_complex_mapping = generate_reaction_complexes(
+        smiles_strings=product_smiles,
+        solvent=solvent,
+        settings=settings,
+        save_path=None
+    )
+    complex._generate_conformers()
+    pc = complex.conformers[0]
+
+    complex, _, rc_species_complex_mapping = generate_reaction_complexes(
+        smiles_strings=reactant_smiles,
+        solvent=solvent,
+        settings=settings,
+        save_path=None
+    )
+    complex._generate_conformers()
+    rc = complex.conformers[0]
+
+    rcs, pcs = map_reaction_complexes(
+        _rc_conformers=[rc], 
+        _pc_conformers=[pc], 
+        settings=settings,
+        rc_species_complex_mapping=rc_species_complex_mapping,
+        pc_species_complex_mapping=pc_species_complex_mapping
+    )
+    rc, pc = rcs[0], pcs[0]
+
+
+    # 2. optimize product conformer
+    new_coords = compute_ff_optimized_coords(pc)
+    pc._coordinates = new_coords
+
+    # 3. Find corresponding reactant conformer
+    adj_matrix = Table_generator(
+        Elements=[a.atomic_symbol for a in rc.atoms],
+        Geometry=rc.coordinates
+    )
+    new_coords = compute_ff_optimized_coords(rc, adj_mat=adj_matrix)
+    rc._coordinates = new_coords
+    rc._coordinates = compute_optimal_coordinates(rc.coordinates, pc.coordinates)
+
+    # 4. export xyz
+    atoms_to_xyz_file(rc.atoms, f'test_rc.xyz')
+    atoms_to_xyz_file(pc.atoms, f'test_pc.xyz')
+
+    # t = time.time()
+    curve = interpolate_geodesic(
+        rc.atomic_symbols, 
+        rc.coordinates, 
+        pc.coordinates,
+        settings
+    )
+
+    write_xyz(f'geodesic_path.xyz', rc.atomic_symbols, curve.path)
+    # print(f'geodesic interpolation: {time.time() - t}')

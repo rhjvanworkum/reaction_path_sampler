@@ -4,8 +4,9 @@ Each reaction path needs a mapping from the atom indexing in the reactant graph 
 
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any
 from tqdm import tqdm
+import time
 
 import networkx as nx
 
@@ -15,6 +16,49 @@ from autode.bond_rearrangement import get_bond_rearrangs, BondRearrangement
 from autode.mol_graphs import reac_graph_to_prod_graph
 
 from src.reaction_path.complexes import compute_optimal_coordinates
+from src.utils import remap_conformer
+
+
+def map_reaction_complexes(
+    _rc_conformers: List[Conformer],
+    _pc_conformers: List[Conformer],
+    settings: Any,
+    rc_species_complex_mapping: Dict[int, List[int]],
+    pc_species_complex_mapping: Dict[int, List[int]],
+) -> Tuple[List[Conformer]]:
+    """
+    Function to make sure that all atoms in reactant & product complexes are aligned with each other
+    """
+    _, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(
+        _rc_conformers[0],
+        _pc_conformers[0]
+    )
+
+    # select best reaction isomorphism & remap reaction
+    t = time.time()
+    print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
+    isomorphism = select_ideal_isomorphism(
+        rc_conformers=_rc_conformers,
+        pc_conformers=_pc_conformers,
+        rc_species_complex_mapping=rc_species_complex_mapping, 
+        pc_species_complex_mapping=pc_species_complex_mapping,
+        isomorphism_idx=isomorphism_idx,
+        isomorphisms=reaction_isomorphisms,
+        settings=settings
+    )
+    print(f'\nSelecting best isomorphism took: {time.time() - t}')
+
+    t = time.time()
+    print('remapping all conformers now ..')
+    # TODO: parallelize this?
+    if isomorphism_idx == 0:
+        rc_conformers = [remap_conformer(conf, isomorphism) for conf in _rc_conformers]
+        pc_conformers = _pc_conformers
+    elif isomorphism_idx == 1:
+        rc_conformers = _rc_conformers
+        pc_conformers = [remap_conformer(conf, isomorphism) for conf in _pc_conformers]
+
+    return rc_conformers, pc_conformers
 
 
 def get_reaction_isomorphisms(
@@ -74,8 +118,8 @@ def compute_isomorphism_score(args) -> float:
 def select_ideal_isomorphism(
     rc_conformers: List[Conformer],
     pc_conformers: List[Conformer],
-    rc_species_complex_mapping, 
-    pc_species_complex_mapping,
+    rc_species_complex_mapping: Dict[int, List[int]], 
+    pc_species_complex_mapping: Dict[int, List[int]], 
     isomorphism_idx: int,
     isomorphisms: List[Dict[int, int]],
     settings: Any
