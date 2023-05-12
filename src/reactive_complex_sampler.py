@@ -82,7 +82,24 @@ class ReactiveComplexSampler:
         print(f'metadyn sampling: {time.time() - t}')
         print(f'metadyn sampled n conformers: {len(confs)}')
 
-        # 2. optimize conformers
+        if len(confs) < 10:
+            confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_tight")
+            print(f'metadyn sampling: {time.time() - t}')
+            print(f'metadyn sampled n conformers: {len(confs)}')
+
+        # 2. prune conformer set
+        t = time.time()
+        confs = self._prune_conformers(
+            complex=complex,
+            conformers=confs,
+            use_graph_pruning=False,
+            use_cregen_pruning=True,
+            init="init_"
+        )
+        print(f'pruning conformers: {time.time() - t}')
+        print(f'conformers after pruning: {len(confs)}\n\n')
+
+        # 3. optimize conformers
         t = time.time()
         confs = self._optimize_conformers(
             complex=complex,
@@ -90,11 +107,13 @@ class ReactiveComplexSampler:
         )
         print(f'optimizing conformers: {time.time() - t}')
 
-        # 3. prune conformer set
+        # 4. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
             complex=complex,
-            conformers=confs
+            conformers=confs,
+            use_graph_pruning=False,
+            use_cregen_pruning=self.settings['use_cregen_pruning']
         )
         print(f'pruning conformers: {time.time() - t}')
         print(f'conformers after pruning: {len(confs)}\n\n')
@@ -112,12 +131,12 @@ class ReactiveComplexSampler:
         return ade_complex
 
     def _sample_initial_complexes(
-        self
+        self,
+        ade_complex: Complex
     ) -> List[Conformer]:
         """
         Sample initial complexes using autodE from the SMILES string
         """
-        ade_complex = self._get_ade_complex()
         ade_complex._generate_conformers()
         ade_complex.conformers.prune_on_rmsd()
 
@@ -146,7 +165,7 @@ class ReactiveComplexSampler:
 
         return complexes
     
-    def _sample_metadynamics_conformers(self, complex: Molecule) -> List[str]:
+    def _sample_metadynamics_conformers(self, complex: Molecule, post_fix: str = "") -> List[str]:
         """
         Sample conformers of a Molecule object complex.
         Returns a list of xyz strings containing conformers
@@ -156,7 +175,9 @@ class ReactiveComplexSampler:
         )
         xcontrol_settings += get_metadynamics_constraint(
             complex,
-            self.settings
+            self.settings,
+            len(self.smiles_strings),
+            post_fix=post_fix
         )
 
         structures, _ = xtb_driver(
@@ -196,34 +217,40 @@ class ReactiveComplexSampler:
         self,
         complex: Molecule,
         conformers: List[str],
+        use_graph_pruning: bool,
+        use_cregen_pruning: bool,
+        init: str = ""
     ) -> List[str]:
         """
         Prunes a set of conformers using CREST CREGEN
         """
-        if self.settings["use_cregen_pruning"]:
+        if use_cregen_pruning:
             conformers = crest_driver(
                 ref_structure=complex.to_xyz_string(),
                 ensemble_structures='\n'.join(conformers),
-                ref_energy_threshold=self.settings["ref_energy_threshold"],
-                rmsd_threshold=self.settings["rmsd_threshold"],
-                conf_energy_threshold=self.settings["conf_energy_threshold"],
-                rotational_threshold=self.settings["rotational_threshold"],
+                ref_energy_threshold=self.settings[f"{init}ref_energy_threshold"][len(self.smiles_strings)],
+                rmsd_threshold=self.settings[f"{init}rmsd_threshold"][len(self.smiles_strings)],
+                conf_energy_threshold=self.settings[f"{init}conf_energy_threshold"][len(self.smiles_strings)],
+                rotational_threshold=self.settings[f"{init}rotational_threshold"][len(self.smiles_strings)],
             )
         
-        pruned_conformers = []
-        smiles_list = [get_canonical_smiles(smi) for smi in self.smiles_strings]
-        # TODO: replace charges in a more structured way?
-        smiles_list = [smi if len(smi) > 6 else smi.replace('+', '').replace('-', '')  for smi in smiles_list]
+        if use_graph_pruning:
+            pruned_conformers = []
+            smiles_list = [get_canonical_smiles(smi) for smi in self.smiles_strings]
+            
+            # TODO: replace charges in a more structured way?
+            # smiles_list = [smi if len(smi) > 6 else smi.replace('+', '').replace('-', '')  for smi in smiles_list]
+            
+            for conformer in conformers:
+                try:
+                    conf_smiles_list = get_canonical_smiles_from_xyz_string_ob(conformer)
+                    if set(conf_smiles_list) == set(smiles_list):
+                        pruned_conformers.append(conformer)
+                except Exception as e:
+                    continue
+            conformers = pruned_conformers
         
-        for conformer in conformers:
-            try:
-                conf_smiles_list = get_canonical_smiles_from_xyz_string_ob(conformer)
-                if set(conf_smiles_list) == set(smiles_list):
-                    pruned_conformers.append(conformer)
-            except Exception as e:
-                continue
-        
-        return pruned_conformers
+        return conformers
 
 
 if __name__ == "__main__":

@@ -7,14 +7,14 @@ reactant_smiles: ["C=CC=C", "C=C"]
 product_smiles: ["C1=CCCCC1"]
 solvent: "Methanol"
 
-n_initial_complexes: 3
+n_initial_complexes: 2
 max_n_reactant_product_pairs: 5
 n_geodesic_retries: 1
 
 xtb_method: "2"
 xtb_n_cores: 2
 xtb_n_cores_metadyn: 2
-n_processes: 8
+n_processes: 10
 
 
 ###

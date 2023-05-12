@@ -4,6 +4,7 @@ File containing interface to Pysisyphus module
 from typing import Optional, Union, Literal, List, Any
 import subprocess
 import os
+import shutil
 import numpy as np
 import h5py
 
@@ -14,7 +15,7 @@ from src.utils import read_trajectory_file
 
 def construct_geometry_block(
     files: Union[str, List[str]],
-    type: Literal["cart"] = "cart"
+    type: Literal["cart", "dlc"] = "cart"
 ) -> str:
     string = "geom:\n"
     string += f" type: {type}\n"
@@ -40,10 +41,16 @@ def construct_cos_block() -> str:
     return "cos:\n type: neb\n climb: True\n\n"
 
 def construct_opt_block() -> str:
-    return "opt:\n type: lbfgs\n align: True\n rms_force: 0.01\n max_step: 0.04\n\n"
+    return " ".join([
+        "opt:\n",
+        "type: lbfgs\n",
+        "align: True\n",
+        "rms_force: 0.01\n",
+        "max_step: 0.04\n\n"
+    ])
 
 def construct_tsopt_block() -> str:
-    return "tsopt:\n type: rsirfo\n do_hess: True\n max_cycles: 75\n thresh: gau_tight\n hessian_recalc: 7\n\n"
+    return "tsopt:\n type: rsirfo\n do_hess: True\n max_cycles: 75\n thresh: gau_tight\n hessian_recalc: 5\n\n"
 
 def construct_irc_block() -> str:
     return "irc:\n type: eulerpc\n rms_grad_thresh: 0.0005\n\n"
@@ -58,6 +65,7 @@ def pysisyphus_driver(
     mult: int,
     job: Literal["ts_opt", "ts_search", "irc"],
     n_cores: int = 2,
+    n_mins_timeout: int = 5,
     solvent: Optional[str] = None
 ):
     if mult != 1:
@@ -99,19 +107,28 @@ def pysisyphus_driver(
             f.writelines(settings_string)
 
         cmd = f'pysis settings.yaml'
-        proc = subprocess.Popen(
-            cmd.split(), 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            text=True,
-        )
-        output = proc.communicate()
+
+        try:
+            output = subprocess.check_output(
+                cmd.split(),
+                text=True,
+                timeout=n_mins_timeout * 60
+            )
+        except Exception as e:
+            output = ''
+            print(e)
+            if isinstance(e, subprocess.TimeoutExpired):
+                print('PYSISPHUS PROCESS TIMED OUT')
         
         if job == "ts_opt":
             tsopt = None
             if os.path.exists('ts_opt.xyz'):
                 with open('ts_opt.xyz', 'r') as f:
                     tsopt = f.readlines()
+            else:
+                if os.path.exists('ts_final_geometry.xyz'):
+                    with open('ts_final_geometry.xyz', 'r') as f:
+                        tsopt = f.readlines()
 
             imaginary_freq = None
             if os.path.exists('ts_final_hessian.h5'):
@@ -162,7 +179,7 @@ def pysisyphus_driver(
                     backward_end = f.readlines()   
 
             return output, forward_irc, backward_irc, forward_end, backward_end
-        
+    
     return execute_pysisyphus()
 
 if __name__ == "__main__":

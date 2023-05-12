@@ -1,9 +1,10 @@
 """
 general utils
 """
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from rdkit import Chem
 import numpy as np
+import os
 import re
 from openbabel import pybel
 
@@ -95,8 +96,30 @@ autodE utils
 import autode as ade
 from autode.conformers.conformer import Conformer
 from autode.atoms import Atoms
+from autode.values import Distance
 from autode.atoms import Atom as AutodeAtom
 from autode.exceptions import XYZfileWrongFormat
+
+
+def set_autode_settings(settings):
+    ade.Config.n_cores = settings['xtb_n_cores']
+    ade.Config.XTB.path = os.environ["XTB_PATH"]
+    ade.Config.rmsd_threshold = Distance(0.3, units="Å")
+    ade.Config.num_conformers = settings["num_conformers"]
+    ade.Config.num_complex_sphere_points = settings["num_complex_sphere_points"]
+    ade.Config.num_complex_random_rotations = settings["num_complex_random_rotations"]
+
+
+def remap_conformer(
+    conformer: Conformer, 
+    mapping: Dict[int, int]
+) -> Conformer:
+    return Conformer(
+        name=conformer.name,
+        atoms=[conformer.atoms[i] for i in sorted(mapping, key=mapping.get)],
+        charge=conformer.charge,
+        mult=conformer.mult
+    )
 
 def sort_complex_conformers_on_distance(
     conformers: List[Conformer],
@@ -127,11 +150,13 @@ def sort_complex_conformers_on_distance(
     else:
         return [conformers[i] for i in np.argsort(np.array(distances))]
 
+
 def autode_conf_to_xyz_string(conf) -> str:
     str = f"{len(conf.atoms)}\n \n"
     for atom in conf.atoms:
         str += f"{atom.atomic_symbol} {round(atom.coord.x, 4)} {round(atom.coord.y, 4)} {round(atom.coord.z, 4)}\n"
     return str
+
 
 def xyz_string_to_autode_atoms(xyz_file: str) -> Atoms:
     """

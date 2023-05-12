@@ -16,7 +16,7 @@ def xtb_driver(
     charge: int,
     mult: int,
     job: Literal["sp", "opt", "scan", "metadyn"] = "sp",
-    method: str = '1',
+    method: str = '2',
     solvent: Optional[str] = None,
     xcontrol_settings: Optional[str] = None,
     n_cores: int = 4

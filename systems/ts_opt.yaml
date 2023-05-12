@@ -1,0 +1,12 @@
+output_dir: './scratch/ts_opt_test'
+template_folder_path: './scratch/templates/da_cores_new/'
+reaction_smiles: "C=CC(=C)c1ccccc1.C=CC=O>>O=CC1CCC=C(c2ccccc2)C1"
+solvent: "Methanol"
+
+
+n_confs: 4
+
+n_mins_timeout: 15
+
+min_ts_imaginary_freq: -50
+max_ts_imaginary_freq: -1000
