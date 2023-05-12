@@ -3,5 +3,7 @@
 source env.sh
 
 # srun python3 -u compute_da_regioselectivity.py
-python compute_da_regioselectivity_2.py
+# python compute_da_regioselectivity_2.py
+# python scripts/diels-alder/save_dataset.py
 # python3 test_orca.py
+python -u search_rxn_path.py systems/ac_base.yaml

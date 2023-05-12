@@ -1,129 +1,51 @@
-""" actual test area """
-# import itertools
-
-# nodes = [1, 2, 3, 4]
-# for comb in itertools.combinations(nodes, 2):
-#     print(comb)
-
-
-""" Compare DF results """
-from sklearn.metrics import roc_auc_score
+import os
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import networkx as nx
+import yaml
 
-df = pd.read_csv('./data/test_da_reactions.csv')
+from src.reaction_path.complexes import generate_reactant_product_complexes
+from src.reaction_path.reaction_graph import get_reaction_isomorphisms
+from src.ts_template import TStemplate
 
-# df = pd.read_csv('./data/test_da_reactions_2.csv')
-# original_df = df[df['simulation_idx'] == 0]
-# virtual_df = df[df['simulation_idx'] == 1]
-
-# labels = []
-# for _, row in virtual_df.iterrows():
-#     barrier = row['reaction_energy']
-#     other_barriers = virtual_df[virtual_df['substrates'] == row['substrates']]['reaction_energy']
-#     label = int((barrier <= other_barriers).all())
-#     labels.append(label)
-# virtual_df['labels'] = labels
-# df = pd.concat([original_df, virtual_df])
-
-
-right = 0
-
-targets, preds = [], []
-for idx in df['reaction_idx'].unique():
-    target = df[(df['reaction_idx'] == idx) & (df['simulation_idx'] == 0)]['labels']
-    pred = df[(df['reaction_idx'] == idx) & (df['simulation_idx'] == 1)]['labels']
-
-    if len(pred) > 0 and len(target) > 0 and 1 in pred.values:
-
-        if (target.values == pred.values).all():
-            right += 1
-            
-        for val in target:
-            targets.append(val)
-        for val in pred:
-            preds.append(val)
-
-print(roc_auc_score(targets, preds) * 100, 'AUROC')
-print(right/ len(df['reaction_idx'].unique()) * 100, "%", "accuracy")
+from autode.bond_rearrangement import get_bond_rearrangs
+from autode.mol_graphs import (
+    get_mapping_ts_template,
+    get_truncated_active_mol_graph,
+)
+import autode as ade
+from autode.species import Complex
+from autode.mol_graphs import reac_graph_to_prod_graph
 
 
-""" Cancel SLURM jobs """
-# import os
-# for i in range(36000, 37000):
-#     os.system(f'scancel {i}')
+if __name__ == "__main__":
+    img_name = 'test2.png'
 
-""" Keep only rc's & pc's from previous job """
-# import os
-# import shutil 
-# for root, dirs, files in os.walk('./scratch/da_reaction_cores_4/'):
-#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores_4':
-#         for dir in ['0', '1', '2', '3', '4']:
-#             path = os.path.join(root, dir)
-#             if os.path.exists(path):
-#                 shutil.rmtree(path)
-#             for _, _, files in os.walk(root):
-#                 for file in files:
-#                     if os.path.exists(os.path.join(root, file)):
-#                         if file != 'rcs.xyz' and file != 'pcs.xyz':
-#                             os.remove(os.path.join(root, file))
+    """ RC's / PC's """
+    with open('./systems/ac_base.yaml', "r") as f:
+        settings = yaml.load(f, Loader=yaml.Loader)
+    output_dir = settings["output_dir"]
+    reactant_smiles = settings["reactant_smiles"]
+    product_smiles = settings["product_smiles"]
+    solvent = settings["solvent"]
+    
+    rc_complex, _rc_conformers, rc_n_species, rc_species_complex_mapping = generate_reactant_product_complexes(
+        reactant_smiles, 
+        solvent, 
+        settings, 
+        f'{output_dir}/rcs.xyz'
+    )
+    pc_complex, _pc_conformers, pc_n_species, pc_species_complex_mapping = generate_reactant_product_complexes(
+        product_smiles, 
+        solvent, 
+        settings, 
+        f'{output_dir}/pcs.xyz'
+    )   
+    
+    # bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(rc_complex, pc_complex)
+    # # graph = reac_graph_to_prod_graph(pc_complex.graph, bond_rearr)
+    # graph = rc_complex.graph
 
-""" Test how many reaction paths worked """
-# import os
-# i = 0
-# list = []
-# for root, dirs, files in os.walk('./scratch/da_reaction_cores_new_new/'):
-#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_reaction_cores_new_new':
-#         if os.path.exists(os.path.join(root, 'reaction.xyz')):
-#             list.append(int(root.split('/')[-1]))
-#             i += 1
-# print(i)
-# print(sorted(list))
-
-
-""" Print which TS templates matched or not """
-# import os
-# i = 0
-# list = []
-# for root, dirs, files in os.walk('./scratch/da_tss_test_new_new3/'):
-#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_tss_test_new_new3':
-       
-#         # if root != './scratch/da_tss_test_new_new1/':
-
-#         #     for _, _, files in os.walk(root):
-#         #         for file in files:
-#         #             if file.split('.')[-1] == 'out' and file.split('_')[0] == 'job':
-#         #                 with open(os.path.join(root, file), 'r') as f:
-#         #                     lines = "\n".join(f.readlines())
-
-#         #                     if "MATCHED!!" in lines:
-#         #                         list.append(int(root.split('/')[-1]))
-#         #                         i += 1
-
-#         if os.path.exists(os.path.join(root, 'reaction.xyz')):
-#             list.append(int(root.split('/')[-1]))
-#             i += 1
-
-# print(i)
-# print(sorted(list))
-
-
-
-""" Plot interpolated paths stuff """
-# import matplotlib.pyplot as plt
-# import numpy as np
-# from src.molecule import read_xyz_string
-# from src.utils import read_trajectory_file
-
-# structures, _ = read_trajectory_file('better_path.xyz')
-# geometries = []
-
-# for struct in structures:
-#     geometries.append(read_xyz_string(struct.split('\n')))
-
-# n_atoms = len(geometries[0])
-
-# for i in range(n_atoms):
-#     for j in range(3):
-#         plt.plot(np.arange(len(geometries)), [geom[i].coordinates[j] for geom in geometries])
-
-# plt.savefig('test2.png')
+    for idx, atom in enumerate(rc_complex.atoms):
+        print(idx, atom.atomic_symbol)

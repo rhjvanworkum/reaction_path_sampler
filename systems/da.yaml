@@ -2,16 +2,10 @@
 ### 1. GENERAL SETTINGS
 ###
 
-output_dir: './scratch/ac_base_test'
+output_dir: './scratch/da_test'
 
-product_smiles:
-- "n1nn([O-])c2ncccc12"
-- "CC(=O)N"
-- "O"
-reactant_smiles:
-- "n1nn(OC(=O)C)c2ncccc12"
-- "N"
-- "[OH-]"
+reactant_smiles: ["C1=CC=CO1", "C=C"]
+product_smiles: ["C1=CC(O2)CCC12"]
 
 solvent: "Methanol"
 
@@ -25,7 +19,7 @@ allow_same_connectivity: True
 
 xtb_n_cores: 2
 xtb_n_cores_metadyn: 2
-n_processes: 16
+n_processes: 10
 
 xtb_method: "2"
 num_complex_sphere_points: 2

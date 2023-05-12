@@ -17,7 +17,7 @@ from src.reaction_path.complexes import compute_optimal_coordinates, generate_re
 from src.reaction_path.path_interpolation import interpolate_geodesic
 from src.reaction_path.reaction_ends import check_reaction_ends
 from src.reaction_path.reaction_graph import get_reaction_isomorphisms, select_ideal_isomorphism, select_ideal_pair_isomorphism
-
+from src.visualization.plotly import plot_networkx_mol_graph
 from src.ts_template import TStemplate
 from src.interfaces.PYSISYPHUS import pysisyphus_driver
 from src.molecule import read_xyz_string
@@ -46,22 +46,30 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
     set_autode_settings(settings)
 
     # generate rc/pc complexes & reaction isomorphisms
-    rc_complex, _rc_conformers, rc_n_species, rc_species_complex_mapping = generate_reactant_product_complexes(
+    rc_complex, _rc_conformers, _, rc_species_complex_mapping = generate_reactant_product_complexes(
         reactant_smiles, 
         solvent, 
         settings, 
         f'{output_dir}/rcs.xyz'
     )
-    pc_complex, _pc_conformers, pc_n_species, pc_species_complex_mapping = generate_reactant_product_complexes(
+    pc_complex, _pc_conformers, _, pc_species_complex_mapping = generate_reactant_product_complexes(
         product_smiles, 
         solvent, 
         settings, 
         f'{output_dir}/pcs.xyz'
-    )     
+    ) 
+    rc_complex.graph = _rc_conformers[0].graph  # in case that conformer & complex graphs don't match
+    pc_complex.graph = _pc_conformers[0].graph  # in case that conformer & complex graphs don't match
     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(rc_complex, pc_complex)
 
-    print(bond_rearr, reaction_isomorphisms, isomorphism_idx)
+    # visualize graph here
+    from autode.mol_graphs import reac_graph_to_prod_graph
+    plot_networkx_mol_graph(rc_complex.graph, _rc_conformers[0].coordinates)
+    plot_networkx_mol_graph(pc_complex.graph, _pc_conformers[0].coordinates)
+    # graph = reac_graph_to_prod_graph(pc_complex.graph, bond_rearr)
+    # plot_networkx_mol_graph(graph, _rc_conformers[0].coordinates)
 
+    return
     # select best reaction isomorphism & remap reaction
     t = time.time()
     print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
@@ -76,6 +84,9 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
     )
     print(f'\nSelecting best isomorphism took: {time.time() - t}')
     
+    # TODO: remove this
+    print(isomorphism)
+
     t = time.time()
     print('remapping all conformers now ..')
     # TODO: parallelize this?
@@ -85,6 +96,10 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
     elif isomorphism_idx == 1:
         rc_conformers = _rc_conformers
         pc_conformers = [remap_conformer(conf, isomorphism) for conf in _pc_conformers]
+
+    # TODO: remove
+    atoms_to_xyz_file(rc_conformers[0].atoms, f'{output_dir}/test_rc.xyz')
+    atoms_to_xyz_file(pc_conformers[0].atoms, f'{output_dir}/test_pc.xyz')
 
     species_complex_mapping = [rc_species_complex_mapping, pc_species_complex_mapping][isomorphism_idx]
     for key, value in species_complex_mapping.items():
@@ -110,26 +125,26 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
 
         print(f'Working on Reactant-Product Complex pair {idx}')
 
-        # screen all isomorphisms once more
-        isomorphism = select_ideal_pair_isomorphism(
-            rc_conformer=_rc_conformers[opt_idx[0]],
-            pc_conformer=_pc_conformers[opt_idx[1]],
-            isomorphism_idx=isomorphism_idx,
-            isomorphisms=reaction_isomorphisms,
-            settings=settings
-        )
+        rc_conformer=rc_conformers[opt_idx[0]]
+        pc_conformer=pc_conformers[opt_idx[1]]
+        # # screen all isomorphisms once more
+        # isomorphism = select_ideal_pair_isomorphism(
+        #     rc_conformer=_rc_conformers[opt_idx[0]],
+        #     pc_conformer=_pc_conformers[opt_idx[1]],
+        #     isomorphism_idx=isomorphism_idx,
+        #     isomorphisms=reaction_isomorphisms,
+        #     settings=settings
+        # )
 
-        if isomorphism_idx == 0:
-            rc_conformer = remap_conformer(_rc_conformers[opt_idx[0]], isomorphism)
-            pc_conformer = _pc_conformers[opt_idx[1]]
-        elif isomorphism_idx == 1:
-            rc_conformer = _rc_conformers[opt_idx[0]]
-            pc_conformer = remap_conformer(_pc_conformers[opt_idx[1]], isomorphism)     
+        # if isomorphism_idx == 0:
+        #     rc_conformer = remap_conformer(_rc_conformers[opt_idx[0]], isomorphism)
+        #     pc_conformer = _pc_conformers[opt_idx[1]]
+        # elif isomorphism_idx == 1:
+        #     rc_conformer = _rc_conformers[opt_idx[0]]
+        #     pc_conformer = remap_conformer(_pc_conformers[opt_idx[1]], isomorphism)     
 
         # 1. Optimally align the 2 conformers using kabsh algorithm
         t = time.time()
-        # rc_conformer = rc_conformers[opt_idx[0]]
-        # pc_conformer = pc_conformers[opt_idx[1]]
         rc_conformer._coordinates = compute_optimal_coordinates(rc_conformer.coordinates, pc_conformer.coordinates)
         
         atoms_to_xyz_file(rc_conformer.atoms, f'{output_dir}/{idx}/selected_rc.xyz')

@@ -2,4 +2,4 @@
 
 source env.sh
 
-python -u search_rxn_path.py systems/ac_base.yaml
+python -u search_rxn_path.py systems/smc_small.yaml

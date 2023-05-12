@@ -22,7 +22,7 @@ allow_same_connectivity: True
 
 xtb_n_cores: 2
 xtb_n_cores_metadyn: 2
-n_processes: 16
+n_processes: 10
 
 xtb_method: "2"
 num_complex_sphere_points: 2
