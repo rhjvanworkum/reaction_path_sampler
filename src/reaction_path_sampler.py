@@ -13,7 +13,7 @@ from autode.input_output import atoms_to_xyz_file
 from autode.bond_rearrangement import get_bond_rearrangs
 from autode.mol_graphs import reac_graph_to_prod_graph
 
-from src.reactive_complex_sampler import ReactiveComplexSampler
+from src.conformational_sampling.metadyn_conformer_sampler import ReactiveComplexSampler
 from src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 
 

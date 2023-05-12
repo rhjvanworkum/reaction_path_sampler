@@ -2,7 +2,7 @@ import yaml
 
 from autode.input_output import atoms_to_xyz_file
 
-from src.reactive_complex_sampler import ReactiveComplexSampler
+from src.conformational_sampling.metadyn_conformer_sampler import ReactiveComplexSampler
 
 # sn2
 reactant_smiles = ["[O-][N+](=O)CCCl", "[F-]"]

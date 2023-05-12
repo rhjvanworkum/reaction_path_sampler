@@ -2,14 +2,16 @@
 ### 1. GENERAL SETTINGS
 ###
 
-output_dir: './scratch/da_test'
+output_dir: './scratch/da_test_test'
 
-reactant_smiles: ["C1=CC=CO1", "C=C"]
-product_smiles: ["C1=CC(O2)CCC12"]
+# reactant_smiles: ["C1=CC=CO1", "C=C"]
+# product_smiles: ["C1=CC(O2)CCC12"]
+reactant_smiles: ["C=CC=CCCO", "C=C"]
+product_smiles: ["OCCC1C=CCCC1"]
 solvent: "Methanol"
 
 sampling_method: metadynamics+topology
-force_conformer_sampling: True
+force_conformer_sampling: False
 
 n_initial_complexes: 1
 max_n_aligned_screening_pairs: 1000

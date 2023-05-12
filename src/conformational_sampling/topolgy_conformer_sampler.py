@@ -10,7 +10,8 @@ import time
 from src.interfaces.XTB import xtb_driver
 
 from src.interfaces.lewis import compute_adjacency_matrix, mol_write
-from src.interfaces.xtb_utils import get_wall_constraint
+from src.interfaces.xtb_utils import compute_wall_radius, get_wall_constraint
+from src.molecule import Molecule
 from src.utils import geom_to_xyz_string, xyz_string_to_geom
 
 def optimize_conformer(args):
@@ -25,6 +26,13 @@ def optimize_conformer(args):
         xcontrol_settings=xcontrol_settings,
         n_cores=cores
     )
+
+def optimize_conformer_ff(args):
+    atomic_symbols, coordinates, adj_mat = args
+    new_coords = compute_ff_optimized_coords(
+        atomic_symbols, coordinates, adj_mat
+    )
+    return geom_to_xyz_string(atomic_symbols, new_coords)
 
 def compute_ff_optimized_coords(
     atomic_symbols: List[str],
@@ -97,26 +105,43 @@ class TopologyConformerSampler:
         self.solvent = solvent
         self.settings = settings
 
-    def sample_conformers(self, conformers: List[str]) -> List[str]:
-        pre_opt_conformers = []
-        for conformer in conformers:
-            atomic_symbols, coordinates = xyz_string_to_geom(conformer)
-            new_coords = compute_ff_optimized_coords(
-                atomic_symbols,
-                coordinates,
-                self.adjacency_matrix
-            )
-            conformer = geom_to_xyz_string(atomic_symbols, new_coords)
-            pre_opt_conformers.append(conformer)
+        self.settings["wall_radius"] = compute_wall_radius(
+            complex=Molecule.from_autode_mol(self.mol),
+            settings=self.settings
+        )
 
+    def sample_conformers(self, conformers: List[str]) -> List[str]:
+        # 1. Find similar conformers
+        t = time.time()
+        confs = self._compute_ff_optimised_conformers(
+            conformers=conformers
+        )
+        print(f'optimizing conformers with FF: {time.time() - t}')
+
+        # 2. Optimize conformers
         t = time.time()
         confs = self._optimize_conformers(
-            conformers=pre_opt_conformers,
+            conformers=confs,
         )
         print(f'optimizing conformers: {time.time() - t}')
 
         return confs
     
+    def _compute_ff_optimised_conformers(
+        self,
+        conformers: List[str]
+    ):  
+        arguments = []
+        for conformer in conformers:
+            atomic_symbols, coordinates = xyz_string_to_geom(conformer)
+            arguments.append((atomic_symbols, coordinates, self.adjacency_matrix))
+ 
+        with ProcessPoolExecutor(max_workers=self.settings['n_processes']) as executor:
+            pre_opt_conformers = list(tqdm(executor.map(optimize_conformer_ff, arguments), total=len(arguments), desc="Optimizing conformers FF"))
+
+        pre_opt_conformers = list(filter(lambda x: x is not None, pre_opt_conformers))
+        return pre_opt_conformers
+
     def _optimize_conformers(
         self,
         conformers: List[str],
