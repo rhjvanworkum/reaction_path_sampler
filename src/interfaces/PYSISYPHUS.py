@@ -73,7 +73,7 @@ def pysisyphus_driver(
 
     settings_string = construct_geometry_block(
         files=[file.split('/')[-1] for file in geometry_files],
-        type="dlc"
+        type="cart"
     )
     settings_string += construct_calculation_block(
         charge=charge,
