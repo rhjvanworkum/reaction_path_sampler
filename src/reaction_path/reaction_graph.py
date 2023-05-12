@@ -31,26 +31,23 @@ def get_reaction_isomorphisms(
         [pc_complex, rc_complex],
     ]):
         bond_rearrs = get_bond_rearrangs(reaction_complexes[1], reaction_complexes[0], name='test')
-
-        print(bond_rearrs)
         if bond_rearrs is not None:
             for bond_rearr in bond_rearrs:
                 graph1 = reaction_complexes[0].graph
                 graph2 = reac_graph_to_prod_graph(reaction_complexes[1].graph, bond_rearr)
                 mappings = []
-                # print(mappings)
                 for isomorphism in nx.vf2pp_all_isomorphisms(
                     graph1, 
                     graph2, 
                     node_label="atom_label"
                 ):
-                    # print(isomorphism)
                     mappings.append(isomorphism)
-                # print(mappings)
+
                 mappings = [dict(s) for s in set(frozenset(d.items()) for d in mappings)]
 
                 if len(mappings) > 0:
                     return bond_rearr, mappings, idx
+
 
 def compute_isomorphism_score(args) -> float:
     isomorphism, species_complex_mapping, coords1, coords2 = args

@@ -131,12 +131,12 @@ class ReactiveComplexSampler:
         return ade_complex
 
     def _sample_initial_complexes(
-        self
+        self,
+        ade_complex: Complex
     ) -> List[Conformer]:
         """
         Sample initial complexes using autodE from the SMILES string
         """
-        ade_complex = self._get_ade_complex()
         ade_complex._generate_conformers()
         ade_complex.conformers.prune_on_rmsd()
 
