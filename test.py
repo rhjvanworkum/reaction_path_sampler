@@ -62,12 +62,11 @@ from autode.input_output import atoms_to_xyz_file
 from openbabel import openbabel as ob
 from lewis import Table_generator, mol_write
 from geodesic_interpolate.fileio import write_xyz
-from src.reaction_path.complexes import compute_optimal_coordinates, generate_reaction_complexes
-from src.reaction_path.path_interpolation import interpolate_geodesic
-from src.reaction_path.reaction_graph import map_reaction_complexes
 
-from src.reactive_complex_sampler import ReactiveComplexSampler
-from src.utils import set_autode_settings
+from src.reaction_path.complexes import compute_optimal_coordinates, generate_reaction_complex
+from src.reaction_path.path_interpolation import interpolate_geodesic
+from src.reaction_path.reaction_graph import get_reaction_graph_isomorphism, map_reaction_complexes
+from src.utils import remap_conformer, set_autode_settings
 
 def compute_ff_optimized_coords(
     conformer: ade.Species,
@@ -142,33 +141,18 @@ if __name__ == "__main__":
     product_smiles = settings["product_smiles"]
     solvent = settings["solvent"]
 
-    complex, _, pc_species_complex_mapping = generate_reaction_complexes(
-        smiles_strings=product_smiles,
-        solvent=solvent,
-        settings=settings,
-        save_path=None
-    )
-    complex._generate_conformers()
-    pc = complex.conformers[0]
+    # 1. Get reaction complexes 
+    rc_complex = generate_reaction_complex(reactant_smiles)
+    pc_complex = generate_reaction_complex(product_smiles)
 
-    complex, _, rc_species_complex_mapping = generate_reaction_complexes(
-        smiles_strings=reactant_smiles,
-        solvent=solvent,
-        settings=settings,
-        save_path=None
-    )
-    complex._generate_conformers()
-    rc = complex.conformers[0]
+    # 2. Remap the reaction
+    bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(rc_complex, pc_complex, settings)
+    if isomorphism_idx == 0:
+        rc_complex.conformers = [remap_conformer(conf, isomorphism) for conf in rc_complex.conformers]
+    elif isomorphism_idx == 1:
+        pc_complex.conformers = [remap_conformer(conf, isomorphism) for conf in pc_complex.conformers]
 
-    rcs, pcs = map_reaction_complexes(
-        _rc_conformers=[rc], 
-        _pc_conformers=[pc], 
-        settings=settings,
-        rc_species_complex_mapping=rc_species_complex_mapping,
-        pc_species_complex_mapping=pc_species_complex_mapping
-    )
-    rc, pc = rcs[0], pcs[0]
-
+    rc, pc = rc_complex.conformers[0], pc_complex.conformers[0]
 
     # 2. optimize product conformer
     new_coords = compute_ff_optimized_coords(pc)

@@ -16,10 +16,10 @@ from copy import deepcopy
 #               File:  Optional. If Table_generator encounters a problem then it is often useful to have the name of the file the geometry came from printed. 
 # Outputs:      Adjacency matrix
 #
-def Table_generator(Elements,Geometry,File=None):
+def compute_adjacency_matrix(elements, geometry, File=None):
 
     # Initialize UFF bond radii (Rappe et al. JACS 1992)
-    # NOTE: Units of angstroms 
+    # NOTE: Units of angstroms
     # NOTE: These radii neglect the bond-order and electronegativity corrections in the original paper. Where several values exist for the same atom, the largest was used. 
     Radii = {  'H':0.354, 'He':0.849,\
               'Li':1.336, 'Be':1.074,                                                                                                                          'B':0.838,  'C':0.757,  'N':0.700,  'O':0.658,  'F':0.668, 'Ne':0.920,\
@@ -49,26 +49,26 @@ def Table_generator(Elements,Geometry,File=None):
     scale_factor = 1.1
 
     # Print warning for uncoded elements.
-    for i in Elements:
+    for i in elements:
         if i not in Radii.keys():
             print("ERROR in Table_generator: The geometry contains an element ({}) that the Table_generator function doesn't have bonding information for. This needs to be directly added to the Radii".format(i)+\
                   " dictionary before proceeding. Exiting...")
             quit()
 
     # Generate distance matrix holding atom-atom separations (only save upper right)
-    Dist_Mat = np.triu(cdist(Geometry,Geometry))
+    Dist_Mat = np.triu(cdist(geometry,geometry))
     
     # Find plausible connections
     x_ind,y_ind = np.where( (Dist_Mat > 0.0) & (Dist_Mat < max([ Radii[i]**2.0 for i in Radii.keys() ])) )
 
     # Initialize Adjacency Matrix
-    Adj_mat = np.zeros([len(Geometry),len(Geometry)])
+    Adj_mat = np.zeros([len(geometry),len(geometry)])
 
     # Iterate over plausible connections and determine actual connections
     for count,i in enumerate(x_ind):
         
         # Assign connection if the ij separation is less than the UFF-sigma value times the scaling factor
-        if Dist_Mat[i,y_ind[count]] < (Radii[Elements[i]]+Radii[Elements[y_ind[count]]])*scale_factor:            
+        if Dist_Mat[i,y_ind[count]] < (Radii[elements[i]]+Radii[elements[y_ind[count]]])*scale_factor:            
             Adj_mat[i,y_ind[count]]=1
     
     # Hermitize Adj_mat
@@ -79,10 +79,10 @@ def Table_generator(Elements,Geometry,File=None):
     conditions = { "H":1, "C":4, "F":1, "Cl":1, "Br":1, "I":1, "O":2, "N":4, "B":4 }
     for count_i,i in enumerate(Adj_mat):
 
-        if Max_Bonds[Elements[count_i]] is not None and sum(i) > Max_Bonds[Elements[count_i]]:
-            problem_dict[Elements[count_i]] += 1
+        if Max_Bonds[elements[count_i]] is not None and sum(i) > Max_Bonds[elements[count_i]]:
+            problem_dict[elements[count_i]] += 1
             cons = sorted([ (Dist_Mat[count_i,count_j],count_j) if count_j > count_i else (Dist_Mat[count_j,count_i],count_j) for count_j,j in enumerate(i) if j == 1 ])[::-1]
-            while sum(Adj_mat[count_i]) > Max_Bonds[Elements[count_i]]:
+            while sum(Adj_mat[count_i]) > Max_Bonds[elements[count_i]]:
                 sep,idx = cons.pop(0)
                 Adj_mat[count_i,idx] = 0
                 Adj_mat[idx,count_i] = 0

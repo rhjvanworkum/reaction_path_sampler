@@ -7,81 +7,107 @@ import os
 import time
 
 import autode as ade
+from autode.species import Complex
 from autode.geom import get_rot_mat_kabsch
 from autode.conformers.conformer import Conformer
 
-from src.reactive_complex_sampler import ReactiveComplexSampler
 from src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 
 
-def generate_reaction_complexes(
+def generate_reaction_complex(
     smiles_strings: List[str],
-    solvent: str,
-    settings: Any,
-    save_path: str,
-    compute_conformers: bool = False
-) -> Tuple[List[Conformer]]:
-    """
-    Function that creates molecular complexes from provided SMILES strings
-    :args smiles_strings: List of SMILES strings
-    :args solvent: Solvent to be used
-    :args settings: Settings object
-    :args save_path: In which folder to save conformers of the molecular complex
-
-    Returns:
-
-    """
-    rps = ReactiveComplexSampler(
-        smiles_strings=smiles_strings,
-        solvent=solvent,
-        settings=settings
-    )
-
-    complex = rps._get_ade_complex()
-
-    species_complex_mapping = None
-    if len(smiles_strings) > 1:
+) -> Complex:
+    # create autodE complex object
+    if len(smiles_strings) == 1:
+        ade_complex = ade.Molecule(smiles=smiles_strings[0])
+        ade_complex.species_complex_mapping = None
+    else:
+        ade_complex = Complex(*[ade.Molecule(smiles=smi) for smi in smiles_strings])
         species_complex_mapping = {}
         mols = [ade.Molecule(smiles=smi) for smi in smiles_strings]
         tot_atoms = 0
         for idx, mol in enumerate(mols):
             species_complex_mapping[idx] = np.arange(tot_atoms, tot_atoms + len(mol.atoms))
             tot_atoms += len(mol.atoms)
+        ade_complex.species_complex_mapping = species_complex_mapping
 
-    if compute_conformers:
-        if os.path.exists(save_path):
-            conformers, _ = read_trajectory_file(save_path)
-            conformer_list = [Conformer(
-                atoms=xyz_string_to_autode_atoms(structure), 
-                charge=complex.charge, 
-                mult=complex.mult
-            ) for structure in conformers]
+    # sample literally a single conformer
+    t = time.time()
+    ade.Config.num_conformers = 1
+    ade.Config.max_num_complex_conformers = 1
+    ade_complex._generate_conformers()
+    print(f'Generating autodE conformer took: {time.time() - t}')
 
-        else:
-            t = time.time()
-            complexes = rps._sample_initial_complexes(complex)
+    return ade_complex
 
-            print(f'time to do autode sampling: {time.time() - t}')
-            conformer_list = []
-            conformer_xyz_list = []
-            for complex in complexes:
-                conformers = rps.sample_reaction_complexes(complex=complex)
-                for conformer in conformers:
-                    conformer_xyz_list.append(conformer)
-                    conformer_list.append(Conformer(
-                        atoms=xyz_string_to_autode_atoms(conformer), 
-                        charge=complex.charge, 
-                        mult=complex.mult
-                    ))
+# def generate_reaction_complexes(
+#     smiles_strings: List[str],
+#     solvent: str,
+#     settings: Any,
+#     save_path: str,
+#     compute_conformers: bool = False
+# ) -> Tuple[List[Conformer]]:
+#     """
+#     Function that creates molecular complexes from provided SMILES strings
+#     :args smiles_strings: List of SMILES strings
+#     :args solvent: Solvent to be used
+#     :args settings: Settings object
+#     :args save_path: In which folder to save conformers of the molecular complex
 
-            with open(save_path, 'w') as f:
-                f.writelines(remove_whitespaces_from_xyz_strings(conformer_xyz_list))
+#     Returns:
 
-        return complex, conformer_list, len(smiles_strings), species_complex_mapping
+#     """
+#     rps = ReactiveComplexSampler(
+#         smiles_strings=smiles_strings,
+#         solvent=solvent,
+#         settings=settings
+#     )
+
+#     complex = rps._get_ade_complex()
+
+#     species_complex_mapping = None
+#     if len(smiles_strings) > 1:
+#         species_complex_mapping = {}
+#         mols = [ade.Molecule(smiles=smi) for smi in smiles_strings]
+#         tot_atoms = 0
+#         for idx, mol in enumerate(mols):
+#             species_complex_mapping[idx] = np.arange(tot_atoms, tot_atoms + len(mol.atoms))
+#             tot_atoms += len(mol.atoms)
+
+#     if compute_conformers:
+#         if os.path.exists(save_path):
+#             conformers, _ = read_trajectory_file(save_path)
+#             conformer_list = [Conformer(
+#                 atoms=xyz_string_to_autode_atoms(structure), 
+#                 charge=complex.charge, 
+#                 mult=complex.mult
+#             ) for structure in conformers]
+
+#         else:
+#             t = time.time()
+#             complexes = rps._sample_initial_complexes(complex)
+
+#             print(f'time to do autode sampling: {time.time() - t}')
+#             conformer_list = []
+#             conformer_xyz_list = []
+#             for complex in complexes:
+#                 conformers = rps.sample_reaction_complexes(complex=complex)
+#                 for conformer in conformers:
+#                     conformer_xyz_list.append(conformer)
+#                     conformer_list.append(Conformer(
+#                         atoms=xyz_string_to_autode_atoms(conformer), 
+#                         charge=complex.charge, 
+#                         mult=complex.mult
+#                     ))
+
+#             with open(save_path, 'w') as f:
+#                 f.writelines(remove_whitespaces_from_xyz_strings(conformer_xyz_list))
+
+#         return complex, conformer_list, len(smiles_strings), species_complex_mapping
     
-    else:
+#     else:
 
-        return complex, len(smiles_strings), species_complex_mapping
+#         return complex, len(smiles_strings), species_complex_mapping
 
 
 
@@ -215,12 +241,14 @@ def compute_optimal_coordinates(
     assert rc_coordinates.shape == pc_coordinates.shape
 
     p_mat = np.array(rc_coordinates, copy=True)
-    p_mat -= np.average(p_mat, axis=0)
+    c = np.average(p_mat, axis=0)
+    p_mat -= c
 
     q_mat = np.array(pc_coordinates, copy=True)
-    q_mat -= np.average(q_mat, axis=0)
+    c = np.average(q_mat, axis=0)
+    q_mat -= c
 
     rot_mat = get_rot_mat_kabsch(p_mat, q_mat)
 
-    fitted_coords = np.dot(rot_mat, p_mat.T).T
+    fitted_coords = np.dot(rot_mat, p_mat.T).T + c
     return fitted_coords

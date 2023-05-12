@@ -11,6 +11,7 @@ import time
 import networkx as nx
 
 import autode as ade
+from autode.species import Complex
 from autode.conformers.conformer import Conformer
 from autode.bond_rearrangement import get_bond_rearrangs, BondRearrangement
 from autode.mol_graphs import reac_graph_to_prod_graph
@@ -18,6 +19,35 @@ from autode.mol_graphs import reac_graph_to_prod_graph
 from src.reaction_path.complexes import compute_optimal_coordinates
 from src.utils import remap_conformer
 
+
+def get_reaction_graph_isomorphism(
+    rc_complex: Complex,
+    pc_complex: Complex,
+    settings: Any
+):
+    # get all isomorphisms based on bond rearrangement
+    t = time.time()
+    bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(
+        rc_complex.conformers[0],
+        pc_complex.conformers[0]
+    )
+    print(f'Finding all possible graph isomorphisms took: {time.time() - t}')
+
+    # select best reaction isomorphism & remap reaction
+    t = time.time()
+    print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
+    isomorphism = select_ideal_isomorphism(
+        rc_conformers=rc_complex.conformers,
+        pc_conformers=pc_complex.conformers,
+        rc_species_complex_mapping=rc_complex.species_complex_mapping, 
+        pc_species_complex_mapping=pc_complex.species_complex_mapping, 
+        isomorphism_idx=isomorphism_idx,
+        isomorphisms=reaction_isomorphisms,
+        settings=settings
+    )
+    print(f'\nSelecting best isomorphism took: {time.time() - t}')
+
+    return bond_rearr, isomorphism, isomorphism_idx
 
 def map_reaction_complexes(
     _rc_conformers: List[Conformer],
