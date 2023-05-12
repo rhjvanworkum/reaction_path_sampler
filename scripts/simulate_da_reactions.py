@@ -7,8 +7,9 @@ import os
 
 
 if __name__ == "__main__":
-    output_folder = './scratch/da_reaction_cores_new_new/'
-    base_settings_file = 'systems/latest_test.yaml'
+    output_folder = './scratch/diels_alder_reaction_cores/'
+    base_settings_file = 'systems/rps.yaml'
+    file_path = 'data/diels_alder_reaction_cores.txt'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -16,7 +17,7 @@ if __name__ == "__main__":
     with open(base_settings_file, "r") as f:
         settings = yaml.load(f, Loader=yaml.Loader)
 
-    with open('data/da_reaction_cores_new_new.txt', 'r') as f:
+    with open(file_path, 'r') as f:
         reaction_smiles_list = [line.replace('\n', '') for line in f.readlines()]
 
     for idx, reaction_smiles in enumerate(reaction_smiles_list):
