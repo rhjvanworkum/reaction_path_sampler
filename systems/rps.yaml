@@ -9,10 +9,10 @@ product_smiles:
 reactant_smiles:
 - '[H]C(C)=CC=C(C)C'
 - CC(Br)=C(C)Br
-
 solvent: "Methanol"
 
-mix_param: 0.8
+sampling_method: metadynamics+topology
+force_conformer_sampling: False
 
 n_initial_complexes: 1
 max_n_aligned_screening_pairs: 1000
@@ -40,7 +40,7 @@ md_settings: {
   "step": 5,
   "dump": 20
 }
-md_time_per_atom: 1.5
+md_time_per_atom: 1.0
 md_settings_tight: {
   "shake": 0,
   "step": 2,

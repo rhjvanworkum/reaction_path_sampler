@@ -49,7 +49,7 @@
 
 """ Cancel SLURM jobs """
 # import os
-# for i in range(37140, 38000):
+# for i in range(37818, 39000):
 #     os.system(f'scancel {i}')
 
 """ Keep only rc's & pc's from previous job """
@@ -68,43 +68,53 @@
 #                             os.remove(os.path.join(root, file))
 
 """ Test how many reaction paths worked """
-# import os
-# i = 0
-# list = []
-# for root, dirs, files in os.walk('./scratch/diels_alder_reaction_cores/'):
-#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'diels_alder_reaction_cores':
-#         if os.path.exists(os.path.join(root, 'reaction.xyz')):
-#             list.append(int(root.split('/')[-1]))
-#             i += 1
-# print(i)
-# print(sorted(list))
-
-
-""" Print which TS templates matched or not """
 import os
 i = 0
 list = []
-for root, dirs, files in os.walk('./scratch/da_tss_test/'):
-    if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_tss_test':
-       
-        # if root != './scratch/da_tss_test_new_new1/':
-
-        #     for _, _, files in os.walk(root):
-        #         for file in files:
-        #             if file.split('.')[-1] == 'out' and file.split('_')[0] == 'job':
-        #                 with open(os.path.join(root, file), 'r') as f:
-        #                     lines = "\n".join(f.readlines())
-
-        #                     if "MATCHED!!" in lines:
-        #                         list.append(int(root.split('/')[-1]))
-        #                         i += 1
-
+for root, dirs, files in os.walk('./scratch/diels_alder_reaction_cores_refactor/'):
+    if len(root.split('/')) > 3 and root.split('/')[-2] == 'diels_alder_reaction_cores_refactor':
         if os.path.exists(os.path.join(root, 'reaction.xyz')):
+            
+            # for _, dirs, _ in os.walk(root):
+            #     if len(dirs) > 0:
+            #         list.append(len(dirs))
+
             list.append(int(root.split('/')[-1]))
             i += 1
 
-print(i)
-print(sorted(list))
+# print(i)
+# print(sorted(list))
+
+# import numpy as np
+# l = [j if j not in list else None for j in np.arange(300)]
+# print(tuple(filter(lambda x: x is not None, l)))
+
+
+""" Print which TS templates matched or not """
+# import os
+# i = 0
+# list = []
+# for root, dirs, files in os.walk('./scratch/da_tss_test/'):
+#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'da_tss_test':
+       
+#         # if root != './scratch/da_tss_test_new_new1/':
+
+#         #     for _, _, files in os.walk(root):
+#         #         for file in files:
+#         #             if file.split('.')[-1] == 'out' and file.split('_')[0] == 'job':
+#         #                 with open(os.path.join(root, file), 'r') as f:
+#         #                     lines = "\n".join(f.readlines())
+
+#         #                     if "MATCHED!!" in lines:
+#         #                         list.append(int(root.split('/')[-1]))
+#         #                         i += 1
+
+#         if os.path.exists(os.path.join(root, 'reaction.xyz')):
+#             list.append(int(root.split('/')[-1]))
+#             i += 1
+
+# print(i)
+# print(sorted(list))
 
 
 

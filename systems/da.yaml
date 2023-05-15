@@ -39,7 +39,7 @@ md_settings: {
   "step": 5,
   "dump": 20
 }
-md_time_per_atom: 1.5
+md_time_per_atom: 1.0
 md_settings_tight: {
   "shake": 0,
   "step": 2,

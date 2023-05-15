@@ -1,183 +1,60 @@
-# import os
-# import pandas as pd
-# import numpy as np
-# import matplotlib.pyplot as plt
-# import networkx as nx
-# import yaml
+from openbabel import pybel
+from rdkit import Chem
 
-# from src.reaction_path.complexes import generate_reactant_product_complexes
-# from src.reaction_path.reaction_graph import get_reaction_isomorphisms
-# from src.ts_template import TStemplate
+def correct_common_smiles_errors(smi: str) -> str:
+    # no charge on tetravalent nitrogen
+    if "[NH3]" in smi:
+        smi = smi.replace('[NH3]', '[NH3+]')
 
-# from autode.bond_rearrangement import get_bond_rearrangs
-# from autode.mol_graphs import (
-#     get_mapping_ts_template,
-#     get_truncated_active_mol_graph,
-# )
-# import autode as ade
-# from autode.species import Complex
-# from autode.mol_graphs import reac_graph_to_prod_graph
+    return smi
 
+def correct_common_smiles_errors_rdkit_mol(mol: Chem.Mol) -> Chem.Mol:
+    # charge on tetravalent nitrogen
+    for atom in mol.GetAtoms():
+        if atom.GetAtomicNum() == 7 and atom.GetExplicitValence() == 4:
+            atom.SetFormalCharge(1)
 
-# if __name__ == "__main__":
-#     img_name = 'test2.png'
+    # charge on single-valent oxygen
+    for atom in mol.GetAtoms():
+        if atom.GetAtomicNum() == 8 and atom.GetExplicitValence() == 1:
+            atom.SetFormalCharge(-1)
 
-#     """ RC's / PC's """
-#     with open('./systems/ac_base.yaml', "r") as f:
-#         settings = yaml.load(f, Loader=yaml.Loader)
-#     output_dir = settings["output_dir"]
-#     reactant_smiles = settings["reactant_smiles"]
-#     product_smiles = settings["product_smiles"]
-#     solvent = settings["solvent"]
-    
-#     rc_complex, _rc_conformers, rc_n_species, rc_species_complex_mapping = generate_reactant_product_complexes(
-#         reactant_smiles, 
-#         solvent, 
-#         settings, 
-#         f'{output_dir}/rcs.xyz'
-#     )
-#     pc_complex, _pc_conformers, pc_n_species, pc_species_complex_mapping = generate_reactant_product_complexes(
-#         product_smiles, 
-#         solvent, 
-#         settings, 
-#         f'{output_dir}/pcs.xyz'
-#     )   
-    
-#     # bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(rc_complex, pc_complex)
-#     # # graph = reac_graph_to_prod_graph(pc_complex.graph, bond_rearr)
-#     # graph = rc_complex.graph
+    Chem.SanitizeMol(mol)
+    return mol
 
-#     for idx, atom in enumerate(rc_complex.atoms):
-#         print(idx, atom.atomic_symbol)
+xyz_string = """23
+        -42.22074160
+ N         -0.1533581637        0.9825804383        1.2739039051
+ N         -0.9314672835        1.8721085000        0.6857694304
+ N         -1.7844852926        1.2843725670       -0.1263217123
+ O         -2.6469337238        1.9202577580       -0.8141829371
+ C         -1.5643408264       -0.0715150082       -0.1096709587
+ N         -2.1148123859       -1.0463058051       -0.8228164416
+ C         -1.6126900798       -2.2411188846       -0.5950168831
+ C         -0.6170689781       -2.5378299377        0.3524610930
+ C         -0.0441163388       -1.5300207832        1.0959745405
+ C         -0.5086394195       -0.2346414479        0.8308437824
+ H         -2.0264777068       -3.0253583202       -1.2042225129
+ H         -0.3223975079       -3.5661093430        0.4891505161
+ H          0.6644444800       -1.7219814285        1.8903664078
+ C          2.7396090389        1.1199412553        0.8102805998
+ C          2.7792030617        0.3990428559       -0.4473799687
+ O          2.7612448367        0.7561568062       -1.5778481698
+ N          2.7922987702       -1.1447316980       -0.2304408461
+ H          1.6705198241        1.1830332989        1.1343041867
+ H          3.2861519240        0.6390553442        1.6129653403
+ H          3.0680816907        2.1447567203        0.6678820797
+ H          1.8974774735       -1.4308088947        0.2188311202
+ H          3.5694814265       -1.4372851896        0.3787216036
+ H          2.8717023863       -1.6122235109       -1.1466292738
+"""
 
-
-
-
-from typing import List, Optional
-import os
-import yaml
-import numpy as np
-import autode as ade
-from autode.input_output import atoms_to_xyz_file
-from openbabel import openbabel as ob
-from lewis import Table_generator, mol_write
-from geodesic_interpolate.fileio import write_xyz
-
-from src.reaction_path.complexes import compute_optimal_coordinates, generate_reaction_complex
-from src.reaction_path.path_interpolation import interpolate_geodesic
-from src.reaction_path.reaction_graph import get_reaction_graph_isomorphism, map_reaction_complexes
-from src.utils import remap_conformer, set_autode_settings
-
-def compute_ff_optimized_coords(
-    conformer: ade.Species,
-    adj_mat: Optional[np.array] = None,
-    ff_name: str = 'UFF', 
-    fixed_atoms: List[int] = [], 
-    n_steps: int = 500
-) -> None:
-    # create a mol file object for ob
-    mol_file_name = 'obff.mol'
-
-    if adj_mat is None:
-        adj_mat = Table_generator(
-            Elements=[a.atomic_symbol for a in conformer.atoms],
-            Geometry=conformer.coordinates
-        )
-
-    mol_write(
-        name=mol_file_name,
-        elements=[a.atomic_symbol for a in conformer.atoms],
-        geo=conformer.coordinates,
-        adj_mat=adj_mat,
-        q=0,
-        append_opt=False
-    )
-
-    # load in ob mol
-    conv = ob.OBConversion()
-    conv.SetInAndOutFormats('mol','xyz')
-    mol = ob.OBMol()    
-    conv.ReadFile(mol, mol_file_name)
-
-    # Define constraints  
-    constraints= ob.OBFFConstraints()
-    if len(fixed_atoms) > 0:
-        for atom in fixed_atoms: 
-            constraints.AddAtomConstraint(int(atom)) 
-            
-    # Setup the force field with the constraints 
-    forcefield = ob.OBForceField.FindForceField(ff_name)
-    forcefield.Setup(mol, constraints)     
-    forcefield.SetConstraints(constraints) 
-    
-    # Do a conjugate gradient minimiazation
-    forcefield.ConjugateGradients(n_steps)
-    forcefield.GetCoordinates(mol) 
-
-    # cleanup
-    try:
-        os.remove(mol_file_name)
-    except:
-        pass
-
-    # read coordinates
-    coordinates = []
-    for atom in ob.OBMolAtomIter(mol):
-        coordinates.append([atom.GetX(), atom.GetY(), atom.GetZ()])
-
-    return np.array(coordinates)
-
-
-if __name__ == "__main__":
-    # 1. get product conformer
-    with open('./systems/ac_base.yaml', "r") as f:
-        settings = yaml.load(f, Loader=yaml.Loader)
-
-    # set autode settings
-    set_autode_settings(settings)
-
-    output_dir = settings["output_dir"]
-    reactant_smiles = settings["reactant_smiles"]
-    product_smiles = settings["product_smiles"]
-    solvent = settings["solvent"]
-
-    # 1. Get reaction complexes 
-    rc_complex = generate_reaction_complex(reactant_smiles)
-    pc_complex = generate_reaction_complex(product_smiles)
-
-    # 2. Remap the reaction
-    bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(rc_complex, pc_complex, settings)
-    if isomorphism_idx == 0:
-        rc_complex.conformers = [remap_conformer(conf, isomorphism) for conf in rc_complex.conformers]
-    elif isomorphism_idx == 1:
-        pc_complex.conformers = [remap_conformer(conf, isomorphism) for conf in pc_complex.conformers]
-
-    rc, pc = rc_complex.conformers[0], pc_complex.conformers[0]
-
-    # 2. optimize product conformer
-    new_coords = compute_ff_optimized_coords(pc)
-    pc._coordinates = new_coords
-
-    # 3. Find corresponding reactant conformer
-    adj_matrix = Table_generator(
-        Elements=[a.atomic_symbol for a in rc.atoms],
-        Geometry=rc.coordinates
-    )
-    new_coords = compute_ff_optimized_coords(rc, adj_mat=adj_matrix)
-    rc._coordinates = new_coords
-    rc._coordinates = compute_optimal_coordinates(rc.coordinates, pc.coordinates)
-
-    # 4. export xyz
-    atoms_to_xyz_file(rc.atoms, f'test_rc.xyz')
-    atoms_to_xyz_file(pc.atoms, f'test_pc.xyz')
-
-    # t = time.time()
-    curve = interpolate_geodesic(
-        rc.atomic_symbols, 
-        rc.coordinates, 
-        pc.coordinates,
-        settings
-    )
-
-    write_xyz(f'geodesic_path.xyz', rc.atomic_symbols, curve.path)
-    # print(f'geodesic interpolation: {time.time() - t}')
+mol = pybel.readstring("xyz", xyz_string)
+smi = mol.write(format="smi")
+smi = smi.split()[0].strip()
+smiles = smi.split('.')
+for smi in smiles:
+    smi = correct_common_smiles_errors(smi)
+    mol = Chem.MolFromSmiles(smi)
+    mol = correct_common_smiles_errors_rdkit_mol(mol)
+    print(Chem.MolToSmiles(mol))
