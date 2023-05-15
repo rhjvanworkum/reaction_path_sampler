@@ -758,7 +758,32 @@ def xyz2mol(atoms, coordinates, charge=0, allow_charged_fragments=True,
     return new_mols
 
 
-def canonical_smiles_from_xyz_string(
+def correct_common_smiles_errors(smi: str) -> str:
+    # no charge on tetravalent nitrogen
+    if "[NH3]" in smi:
+        smi = smi.replace('[NH3]', '[NH3+]')
+
+    return smi
+
+
+def correct_common_smiles_errors_rdkit_mol(mol: Chem.Mol) -> Chem.Mol:
+    mol = Chem.AddHs(mol)
+
+    # charge on tetravalent nitrogen
+    for atom in mol.GetAtoms():
+        if atom.GetAtomicNum() == 7 and atom.GetExplicitValence() == 4:
+            atom.SetFormalCharge(1)
+
+    # charge on single-valent oxygen
+    for atom in mol.GetAtoms():
+        if atom.GetAtomicNum() == 8 and atom.GetExplicitValence() == 1:
+            atom.SetFormalCharge(-1)
+
+    Chem.SanitizeMol(mol)
+    return mol
+
+
+def get_canonical_smiles_from_xyz_string_jensen(
     xyz_string: str,
     charge: int,
     charged_fragments: bool = True,
@@ -792,6 +817,7 @@ def canonical_smiles_from_xyz_string(
 
 def get_canonical_smiles_from_xyz_string_ob(
     xyz_string: str,
+    charge: int = 0,
     ignore_chiral: bool = True
 ) -> List[str]:
     from openbabel import pybel
@@ -799,7 +825,40 @@ def get_canonical_smiles_from_xyz_string_ob(
     smi = mol.write(format="smi")
     smi = smi.split()[0].strip()
     smiles = smi.split('.')
-    return [Chem.MolToSmiles(Chem.MolFromSmiles(smi), isomericSmiles=(not ignore_chiral)) for smi in smiles]
+
+    corrected_smiles = []
+    for smi in smiles:
+        smi = correct_common_smiles_errors(smi)
+        mol = Chem.MolFromSmiles(smi)
+        mol = correct_common_smiles_errors_rdkit_mol(mol)
+        corrected_smiles.append(Chem.MolToSmiles(mol))
+
+    return [Chem.MolToSmiles(Chem.MolFromSmiles(smi), isomericSmiles=(not ignore_chiral)) for smi in corrected_smiles]
+
+def get_canonical_smiles_from_xyz_string(
+    xyz_string: str,
+    charge: int = 0,
+    charged_fragments: bool = True,
+    ignore_chiral: bool = True
+):
+    """
+    This function wraps both xyz -> smiles methods
+    """
+    try:
+        smiles = get_canonical_smiles_from_xyz_string_ob(
+            xyz_string=xyz_string,
+            charge=charge,
+            ignore_chiral=ignore_chiral
+        )
+    except:
+        smiles = get_canonical_smiles_from_xyz_string_jensen(
+            xyz_string=xyz_string,
+            charge=charge,
+            charged_fragments=charged_fragments,
+            ignore_chiral=ignore_chiral
+        )
+
+    return smiles
 
 if __name__ == "__main__":
 

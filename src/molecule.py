@@ -3,7 +3,7 @@ Internal Atom & Molecule data type
 """
 
 import numpy as np
-from typing import List
+from typing import List, Tuple
 from openbabel import pybel
 
 class Atom:
@@ -24,7 +24,12 @@ class Atom:
         self.z = coords[2]
 
 class Molecule:
-    def __init__(self, geometry: List[Atom], charge: int = 0, mult: int = 0) -> None:
+    def __init__(
+            self, 
+            geometry: List[Atom], 
+            charge: int = 0, 
+            mult: int = 0
+        ) -> None:
         self.geometry = geometry
         self.charge = charge
         self.mult = mult
@@ -71,6 +76,11 @@ class Molecule:
             string += '\n'
         string += '\n'
         return string
+
+    def to_geometry(self) -> Tuple[str, np.array]:
+        symbols = [a.atomic_symbol for a in self.geometry]
+        coords = np.array([[a.x, a.y, a.z] for a in self.geometry])
+        return symbols, coords
 
     def to_xyz(self, filename) -> None:
         with open(filename, 'w') as f:

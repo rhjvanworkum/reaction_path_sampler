@@ -24,7 +24,7 @@ from src.ts_template import TStemplate
 from src.interfaces.PYSISYPHUS import pysisyphus_driver
 from src.molecule import read_xyz_string
 from src.utils import get_canonical_smiles, read_trajectory_file, remap_conformer, remove_whitespaces_from_xyz_strings, set_autode_settings, xyz_string_to_autode_atoms
-from src.xyz2mol import get_canonical_smiles_from_xyz_string_ob
+from src.xyz2mol import get_canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
 
 
 def write_output_file(variable, name):
@@ -92,19 +92,17 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
         atoms_to_xyz_file(pc_conformer.atoms, f'{output_dir}/{idx}/selected_pc.xyz')
         print(f'aligning complexes: {time.time() - t}')
 
-
         # 2. Create a geodesic interpolation between 2 optimal conformers
         t = time.time()
         curve = interpolate_geodesic(
-            pc_complex.atomic_symbols, 
+            rc_conformer.atomic_symbols, 
             rc_conformer.coordinates, 
             pc_conformer.coordinates,
             settings
         )
-        write_xyz(f'{output_dir}/{idx}/geodesic_path.trj', pc_complex.atomic_symbols, curve.path)
-        write_xyz(f'{output_dir}/{idx}/geodesic_path.xyz', pc_complex.atomic_symbols, curve.path)
+        write_xyz(f'{output_dir}/{idx}/geodesic_path.trj', rc_conformer.atomic_symbols, curve.path)
+        write_xyz(f'{output_dir}/{idx}/geodesic_path.xyz', rc_conformer.atomic_symbols, curve.path)
         print(f'geodesic interpolation: {time.time() - t}')
-
 
         # 3. Perform NEB-CI + TS opt in pysisyphus
         t = time.time()
@@ -149,8 +147,8 @@ def search_reaction_path(settings: Dict[str, Any]) -> None:
                         try:
                             true_rc_smi_list = [get_canonical_smiles(smi) for smi in reactant_smiles]
                             true_pc_smi_list = [get_canonical_smiles(smi) for smi in product_smiles]
-                            pred_rc_smi_list = get_canonical_smiles_from_xyz_string_ob("".join(backward_end))
-                            pred_pc_smi_list = get_canonical_smiles_from_xyz_string_ob("".join(forward_end))
+                            pred_rc_smi_list = get_canonical_smiles_from_xyz_string("".join(backward_end), pc_complex.charge)
+                            pred_pc_smi_list = get_canonical_smiles_from_xyz_string("".join(forward_end), pc_complex.charge)
 
                             print(true_rc_smi_list, pred_rc_smi_list)
                             print(true_pc_smi_list, pred_pc_smi_list)

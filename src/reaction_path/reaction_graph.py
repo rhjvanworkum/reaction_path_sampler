@@ -18,6 +18,7 @@ from autode.mol_graphs import reac_graph_to_prod_graph
 
 from src.reaction_path.complexes import compute_optimal_coordinates
 from src.utils import remap_conformer
+from src.visualization.plotly import plot_networkx_mol_graph
 
 
 def get_reaction_graph_isomorphism(
@@ -25,11 +26,17 @@ def get_reaction_graph_isomorphism(
     pc_complex: Complex,
     settings: Any
 ):
+    
+    # plot_networkx_mol_graph(rc_complex.conformers[0].graph, rc_complex.conformers[0].coordinates)
+    # plot_networkx_mol_graph(pc_complex.conformers[0].graph, pc_complex.conformers[0].coordinates)
+    # print('rc nodes/edges: ', rc_complex.graph.number_of_nodes(), rc_complex.graph.number_of_edges())
+    # print('pc nodes/edges: ', pc_complex.graph.number_of_nodes(), pc_complex.graph.number_of_edges())
+
     # get all isomorphisms based on bond rearrangement
     t = time.time()
     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(
-        rc_complex.conformers[0],
-        pc_complex.conformers[0]
+        rc_complex,
+        pc_complex
     )
     print(f'Finding all possible graph isomorphisms took: {time.time() - t}')
 

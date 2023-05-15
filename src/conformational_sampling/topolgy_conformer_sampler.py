@@ -7,6 +7,7 @@ from tqdm import tqdm
 import numpy as np
 from openbabel import openbabel as ob
 import time
+from src.conformational_sampling import ConformerSampler
 from src.interfaces.XTB import xtb_driver
 
 from src.interfaces.lewis import compute_adjacency_matrix, mol_write
@@ -88,22 +89,25 @@ def compute_ff_optimized_coords(
 
     return np.array(coordinates)
 
-class TopologyConformerSampler:
+class TopologyConformerSampler(ConformerSampler):
 
     def __init__(
         self,
-        mol: ade.Species,
+        smiles_strings: List[str],
+        settings: Any,
         solvent: str,
-        settings: Any
+        mol: ade.Species,
     ) -> None:
+        super().__init__(
+            smiles_strings=smiles_strings,
+            settings=settings,
+            solvent=solvent
+        )
         self.mol = mol
         self.adjacency_matrix = compute_adjacency_matrix(
             elements=[a.atomic_symbol for a in self.mol.atoms],
             geometry=self.mol.coordinates
         )
-
-        self.solvent = solvent
-        self.settings = settings
 
         self.settings["wall_radius"] = compute_wall_radius(
             complex=Molecule.from_autode_mol(self.mol),
@@ -124,6 +128,17 @@ class TopologyConformerSampler:
             conformers=confs,
         )
         print(f'optimizing conformers: {time.time() - t}')
+
+        # 3. prune conformer set
+        t = time.time()
+        confs = self._prune_conformers(
+            initial_geometry=self.mol,
+            conformers=confs,
+            use_graph_pruning=True,
+            use_cregen_pruning=False
+        )
+        print(f'pruning conformers: {time.time() - t}')
+        print(f'conformers after pruning: {len(confs)}\n\n')
 
         return confs
     

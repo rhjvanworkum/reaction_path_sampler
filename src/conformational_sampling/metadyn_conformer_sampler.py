@@ -62,13 +62,14 @@ class MetadynConformerSampler(ConformerSampler):
         solvent: str,
         settings: Dict[str, Any]
     ) -> None:
-        super().__init__()
-        self.smiles_strings = smiles_strings
-        self.solvent = solvent
-        self.settings = settings
+        super().__init__(
+            smiles_strings=smiles_strings,
+            settings=settings,
+            solvent=solvent
+        )
 
-    def sample_conformers(self, mol: ade.Species) -> List[str]:
-        complex = Molecule.from_autode_mol(mol)
+    def sample_conformers(self, initial_geometry: ade.Species) -> List[str]:
+        complex = Molecule.from_autode_mol(initial_geometry)        
         self.settings["wall_radius"] = compute_wall_radius(
             complex=complex,
             settings=self.settings
@@ -89,7 +90,7 @@ class MetadynConformerSampler(ConformerSampler):
         # 2. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
-            complex=complex,
+            initial_geometry=complex,
             conformers=confs,
             use_graph_pruning=False,
             use_cregen_pruning=True,
@@ -111,9 +112,9 @@ class MetadynConformerSampler(ConformerSampler):
         # 4. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
-            complex=complex,
+            initial_geometry=complex,
             conformers=confs,
-            use_graph_pruning=False,
+            use_graph_pruning=True,
             use_cregen_pruning=self.settings['use_cregen_pruning']
         )
         print(f'pruning conformers: {time.time() - t}')
@@ -168,44 +169,6 @@ class MetadynConformerSampler(ConformerSampler):
 
         opt_conformers = list(filter(lambda x: x is not None, opt_conformers))
         return opt_conformers
-        
-    def _prune_conformers(
-        self,
-        complex: Molecule,
-        conformers: List[str],
-        use_graph_pruning: bool,
-        use_cregen_pruning: bool,
-        init: str = ""
-    ) -> List[str]:
-        """
-        Prunes a set of conformers using CREST CREGEN
-        """
-        if use_cregen_pruning:
-            conformers = crest_driver(
-                ref_structure=complex.to_xyz_string(),
-                ensemble_structures='\n'.join(conformers),
-                ref_energy_threshold=self.settings[f"{init}ref_energy_threshold"][len(self.smiles_strings)],
-                rmsd_threshold=self.settings[f"{init}rmsd_threshold"][len(self.smiles_strings)],
-                conf_energy_threshold=self.settings[f"{init}conf_energy_threshold"][len(self.smiles_strings)],
-                rotational_threshold=self.settings[f"{init}rotational_threshold"][len(self.smiles_strings)],
-            )
-        
-
-        # TODO: maybe we can do this by means of adjacency matrix?
-        if use_graph_pruning:
-            pruned_conformers = []
-            smiles_list = [get_canonical_smiles(smi) for smi in self.smiles_strings]
-            
-            for conformer in conformers:
-                try:
-                    conf_smiles_list = get_canonical_smiles_from_xyz_string_ob(conformer)
-                    if set(conf_smiles_list) == set(smiles_list):
-                        pruned_conformers.append(conformer)
-                except Exception as e:
-                    continue
-            conformers = pruned_conformers
-        
-        return conformers
 
 
 if __name__ == "__main__":

@@ -23,12 +23,20 @@ def sample_reactant_and_product_conformers(
     pc_conformers_save_path = os.path.join(output_dir, 'pcs.xyz')
     if settings["force_conformer_sampling"] or not os.path.exists(pc_conformers_save_path):
         if sampling_method == "metadynamics":
-            pc_conf_sampler = MetadynConformerSampler(product_smiles, solvent, settings)
+            pc_conf_sampler = MetadynConformerSampler(
+                smiles_strings=product_smiles, 
+                settings=settings,
+                solvent=solvent
+            )
             pc_conformers = pc_conf_sampler.sample_conformers(pc_complex.conformers[0])
         elif sampling_method == "autode":
             raise NotImplementedError
         elif sampling_method == "metadynamics+topology":
-            pc_conf_sampler = MetadynConformerSampler(product_smiles, solvent, settings)
+            pc_conf_sampler =  MetadynConformerSampler(
+                smiles_strings=product_smiles, 
+                settings=settings,
+                solvent=solvent
+            )
             pc_conformers = pc_conf_sampler.sample_conformers(pc_complex.conformers[0])
         elif sampling_method == "autode+topology":
             raise NotImplementedError
@@ -42,12 +50,21 @@ def sample_reactant_and_product_conformers(
     rc_conformers_save_path = os.path.join(output_dir, 'rcs.xyz')
     if settings["force_conformer_sampling"] or not os.path.exists(rc_conformers_save_path):
         if sampling_method == "metadynamics":
-            rc_conf_sampler = MetadynConformerSampler(reactant_smiles, solvent, settings)
+            rc_conf_sampler = MetadynConformerSampler(
+                smiles_strings=reactant_smiles, 
+                settings=settings,
+                solvent=solvent
+            )
             rc_conformers = rc_conf_sampler.sample_conformers(rc_complex.conformers[0])
         elif sampling_method == "autode":
             raise NotImplementedError
         elif sampling_method == "metadynamics+topology":
-            rc_conf_sampler = TopologyConformerSampler(rc_complex.conformers[0], solvent, settings)
+            rc_conf_sampler = TopologyConformerSampler(
+                smiles_strings=reactant_smiles, 
+                settings=settings,
+                solvent=solvent,
+                mol=rc_complex.conformers[0]
+            )
             rc_conformers = rc_conf_sampler.sample_conformers(pc_conformers)
         elif sampling_method == "autode+topology":
             raise NotImplementedError
