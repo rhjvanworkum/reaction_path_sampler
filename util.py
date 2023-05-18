@@ -7,10 +7,25 @@
 
 
 """ Compare DF results """
-# from sklearn.metrics import roc_auc_score
-# import pandas as pd
+from sklearn.metrics import roc_auc_score, accuracy_score
+import pandas as pd
 
-# df = pd.read_csv('./data/test_da_reactions.csv')
+df = pd.read_csv('./data/DA_regio_solvent_success.csv')
+true_column, pred_column = 'label', 'xtb_labels'
+
+filtered_reaction_idxs = []
+for reaction_idx in df['reaction_idx'].unique():
+    reaction_df = df[df['reaction_idx'] == reaction_idx]
+    if len(reaction_df[~reaction_df[pred_column].isna()]) == len(reaction_df):
+        filtered_reaction_idxs.append(reaction_idx)
+
+df = df[df['reaction_idx'].isin(filtered_reaction_idxs)]
+true, pred = df[true_column], df[pred_column]
+
+print('Converged calculations: ', len(df))
+print(roc_auc_score(true, pred) * 100, 'AUROC')
+print(accuracy_score(true, pred) * 100, "%", "accuracy")
+
 
 # # df = pd.read_csv('./data/test_da_reactions_2.csv')
 # # original_df = df[df['simulation_idx'] == 0]
@@ -49,8 +64,9 @@
 
 """ Cancel SLURM jobs """
 # import os
-# for i in range(37818, 39000):
-#     os.system(f'scancel {i}')
+# for i in range(41716, 43000):
+#     if i not in [41700]:
+#         os.system(f'scancel {i}')
 
 """ Keep only rc's & pc's from previous job """
 # import os
@@ -68,19 +84,19 @@
 #                             os.remove(os.path.join(root, file))
 
 """ Test how many reaction paths worked """
-import os
-i = 0
-list = []
-for root, dirs, files in os.walk('./scratch/diels_alder_reaction_cores_refactor/'):
-    if len(root.split('/')) > 3 and root.split('/')[-2] == 'diels_alder_reaction_cores_refactor':
-        if os.path.exists(os.path.join(root, 'reaction.xyz')):
+# import os
+# i = 0
+# list = []
+# for root, dirs, files in os.walk('./scratch/DA_test_solvent/'):
+#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'DA_test_solvent':
+#         if os.path.exists(os.path.join(root, 'reaction.xyz')):
             
-            # for _, dirs, _ in os.walk(root):
-            #     if len(dirs) > 0:
-            #         list.append(len(dirs))
+#             # for _, dirs, _ in os.walk(root):
+#             #     if len(dirs) > 0:
+#             #         list.append(len(dirs))
 
-            list.append(int(root.split('/')[-1]))
-            i += 1
+#             list.append(int(root.split('/')[-1]))
+#             i += 1
 
 # print(i)
 # print(sorted(list))

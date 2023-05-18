@@ -18,6 +18,7 @@ def get_geometry_constraints(
     string += "  force constant=%f \n" % force
     if len(reactive_coordinate) == 2:
         string += "  distance: %i, %i, %f \n" % (reactive_coordinate[0], reactive_coordinate[1], curr_coordinate_val)
+    string += "$end\n"
     return string
 
 def get_scan_constraint(
@@ -27,6 +28,7 @@ def get_scan_constraint(
 ):
     string = "$scan\n"
     string += '  1: %f, %f, %i \n' % (start, end, nsteps)
+    string += "$end\n"
     return string
 
 def get_wall_constraint(
@@ -35,6 +37,7 @@ def get_wall_constraint(
     string = "$wall\n"
     string += "  potential=logfermi\n"
     string += "  sphere:%f, all\n" % wall_radius
+    string += "$end\n"
     return string
 
 def get_fixing_constraints(atom_idxs: List[int]) -> str:
@@ -43,7 +46,19 @@ def get_fixing_constraints(atom_idxs: List[int]) -> str:
     string += "$end\n"
     return string
 
-def get_metadynamics_constraint(
+def get_atom_constraints(
+    atom_idxs: List[int],
+    force_constant: float,
+    reference_file: str
+):
+    string  = "$constrain\n"
+    string += f"  atoms: {','.join(atom_idxs)}\n"
+    string += f"  force constant={force_constant}\n"
+    string += f"  reference={reference_file}\n"
+    string += "$end\n"
+    return string
+
+def get_metadynamics_settings(
     mol: Molecule,
     settings: Dict[str, Any],
     n_mols: int,
@@ -53,10 +68,12 @@ def get_metadynamics_constraint(
     for k, v in settings[f"md_settings{post_fix}"].items():
         string += f"  {k}={v}\n"
     string += f"  time: {mol.n_atoms * n_mols * settings[f'md_time_per_atom']}\n"
+    string += "$end\n"
 
     string += "$metadyn\n"
     for k, v in settings[f"metadyn_settings"].items():
         string += f"  {k}={v}\n"
+    string += "$end\n"
     return string   
 
 

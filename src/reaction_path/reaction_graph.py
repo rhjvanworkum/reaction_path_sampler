@@ -7,6 +7,7 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
 from tqdm import tqdm
 import time
+import timeout_decorator
 
 import networkx as nx
 
@@ -34,10 +35,16 @@ def get_reaction_graph_isomorphism(
 
     # get all isomorphisms based on bond rearrangement
     t = time.time()
+    # try:
     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(
         rc_complex,
         pc_complex
     )
+    # except TimeoutError:
+    #     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms_from_rxn_mapper(
+    #         rc_complex,
+    #         pc_complex
+    #     )
     print(f'Finding all possible graph isomorphisms took: {time.time() - t}')
 
     # select best reaction isomorphism & remap reaction
@@ -98,6 +105,7 @@ def map_reaction_complexes(
     return rc_conformers, pc_conformers
 
 
+# @timeout_decorator.timeout(15, use_signals=False)
 def get_reaction_isomorphisms(
     rc_complex: ade.Species,
     pc_complex: ade.Species,
@@ -105,8 +113,6 @@ def get_reaction_isomorphisms(
     """
     This function returns all possible isomorphisms between the reactant & product graphs
     """
-    # TODO: I think there is some function here that can time out
-
     for idx, reaction_complexes in enumerate([
         [rc_complex, pc_complex],
         [pc_complex, rc_complex],
@@ -128,6 +134,29 @@ def get_reaction_isomorphisms(
 
                 if len(mappings) > 0:
                     return bond_rearr, mappings, idx
+
+def get_reaction_isomorphisms_from_rxn_mapper(
+    rc_complex: ade.Species,
+    pc_complex: ade.Species,
+) -> Tuple[BondRearrangement, Dict[int, int], int]:
+    """
+    This function returns all possible isomorphisms between the reactant & product graphs
+    """
+    mapping, bond_rearr, idx = None, None, None
+
+    for idx, reaction_complexes in enumerate([
+        [rc_complex, pc_complex],
+        [pc_complex, rc_complex],
+    ]):
+        bond_rearrs = get_bond_rearrangs(reaction_complexes[1], reaction_complexes[0], name='test')
+        if bond_rearrs is not None:
+            for bond_rearr in bond_rearrs:
+                bond_rearr = bond_rearr
+                idx = idx
+                break
+            break
+
+    # do something here
 
 
 def compute_isomorphism_score(args) -> float:

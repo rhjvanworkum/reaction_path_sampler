@@ -25,16 +25,36 @@ def construct_geometry_block(
         string += f" fn: [{','.join(files)}]\n\n"
     return string
 
-def construct_calculation_block(
+def construct_xtb_calculation_block(
     charge: int, 
     mult: int,
     solvent: Optional[str] = None
 ) -> str:
-    string = f"calc:\n type: xtb\n charge: {charge}\n mult: {mult}\n pal: 4\n"
+    string = f"calc:\n" 
+    string += " type: xtb\n"
+    string += f" charge: {charge}\n"
+    string += f" mult: {mult}\n"
+    string += " pal: 4\n"
     if solvent is not None:
         string += f" gbsa: {solvent}\n\n"
     else:
         string += "\n"
+    return string
+
+def construct_orca_calculation_block(
+    charge: int, 
+    mult: int,
+    method: str = 'B3LYP',
+    basis: str = '6-31G',
+    solvent: Optional[str] = None
+) -> str:
+    string = f"calc:\n" 
+    string += " type: orca\n"
+    string += f" keywords: {method} {basis}\n"
+    string += f" charge: {charge}\n"
+    string += f" mult: {mult}\n"
+    string += " pal: 4\n"
+    string += "\n"
     return string
 
 def construct_cos_block() -> str:
@@ -66,7 +86,8 @@ def pysisyphus_driver(
     job: Literal["ts_opt", "ts_search", "irc"],
     n_cores: int = 2,
     n_mins_timeout: int = 5,
-    solvent: Optional[str] = None
+    solvent: Optional[str] = None,
+    method: Literal["xtb", "orca"] = "xtb"
 ):
     if mult != 1:
         print(f'WARNING: multiplicity is {mult}')
@@ -75,11 +96,18 @@ def pysisyphus_driver(
         files=[file.split('/')[-1] for file in geometry_files],
         type="cart"
     )
-    settings_string += construct_calculation_block(
-        charge=charge,
-        mult=mult,
-        solvent=solvent
-    )
+    if method == "xtb":
+        settings_string += construct_xtb_calculation_block(
+            charge=charge,
+            mult=mult,
+            solvent=solvent
+        )
+    elif method == "orca":
+        settings_string += construct_orca_calculation_block(
+            charge=charge,
+            mult=mult,
+            solvent=solvent
+        )
 
     if job == "ts_opt":
         settings_string += construct_tsopt_block()
@@ -105,6 +133,10 @@ def pysisyphus_driver(
     def execute_pysisyphus():
         with open('settings.yaml', 'w') as f:
             f.writelines(settings_string)
+
+        with open('/home/rhjvanworkum/reaction_path_sampler/settings.yaml', 'w') as f:
+            f.writelines(settings_string)
+
 
         cmd = f'pysis settings.yaml'
 

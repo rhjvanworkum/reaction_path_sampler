@@ -63,6 +63,8 @@ def xtb_driver(
         xyz_file_name = f'mol-{time.time()}.xyz'
         with open(xyz_file_name, 'w') as f:
             f.writelines(xyz_string)
+        with open('ref.xyz', 'w') as f:
+            f.writelines(xyz_string)
         
         # execute xtb
         cmd = f'{os.environ["XTB_PATH"]} {xyz_file_name} {" ".join(flags)}'

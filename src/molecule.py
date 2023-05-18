@@ -44,6 +44,10 @@ class Molecule:
             charge=species.charge,
             mult=species.mult
         )
+
+    @classmethod
+    def from_xyz_string(cls, xyz_string: str, charge: int, mult: int):
+        return cls(geometry=read_xyz_string(xyz_string), charge=charge, mult=mult)
     
     def to_pybel(self):
         string = ""
