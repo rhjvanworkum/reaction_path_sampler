@@ -8,6 +8,11 @@ import os
 import re
 from openbabel import pybel
 
+def write_output_file(variable, name):
+    if variable is not None:
+        with open(name, 'w') as f:
+            f.writelines(variable)
+
 def get_canonical_smiles(smiles: str) -> str:
     return Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
 

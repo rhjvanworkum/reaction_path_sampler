@@ -4,7 +4,7 @@ from autode.values import Distance
 from autode.species import Complex
 from autode.conformers.conformer import Conformer
 
-
+import os
 import time
 from tqdm import tqdm
 from typing import List, Literal, Any, Dict, Optional, Union
@@ -80,14 +80,9 @@ class MetadynConformerSampler(ConformerSampler):
 
         # 1. sample conformers
         t = time.time()
-        confs = self._sample_metadynamics_conformers(complex=complex, fixed_atoms=fixed_atoms)
+        confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_ts", fixed_atoms=fixed_atoms)
         print(f'metadyn sampling: {time.time() - t}')
         print(f'metadyn sampled n conformers: {len(confs)}')
-
-        # if len(confs) < 10:
-        #     confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_tight", fixed_atoms=fixed_atoms)
-        #     print(f'metadyn sampling: {time.time() - t}')
-        #     print(f'metadyn sampled n conformers: {len(confs)}')
 
         # 2. optimize conformers
         t = time.time()

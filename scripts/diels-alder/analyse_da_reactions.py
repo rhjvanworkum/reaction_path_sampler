@@ -16,7 +16,7 @@ if __name__ == "__main__":
     for i in dataset['uid'].values:
         results_dir = os.path.join(base_dir, f'{i}')
         try:
-            with open(os.path.join(results_dir, 'dft_barrier.txt'), 'r') as f:
+            with open(os.path.join(results_dir, 'barrier.txt'), 'r') as f:
                 barrier = float(f.readlines()[0])
         except:
             barrier = np.nan
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         else:
             label = int((barrier <= other_barriers).all())
             labels.append(label)
-    dataset['dft_ensemble_labels'] = labels
+    dataset['xtb_ensemble_2_labels'] = labels
 
     # save dataset
     dataset.to_csv(dataset_path)

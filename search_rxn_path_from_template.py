@@ -17,14 +17,12 @@ from autode.mol_graphs import (
 from autode.conformers.conformers import atoms_from_rdkit_mol
 from autode.conformers.conformer import Conformer
 
-from search_rxn_path import write_output_file
 from src.interfaces.PYSISYPHUS import pysisyphus_driver
 from src.interfaces.XTB import xtb_driver
 from src.interfaces.xtb_utils import get_fixing_constraints
 from src.reaction_path.reaction_ends import check_reaction_ends
-
 from src.ts_template import get_ts_templates
-from src.utils import autode_conf_to_xyz_string, get_canonical_smiles
+from src.utils import autode_conf_to_xyz_string, get_canonical_smiles, write_output_file
 from src.xyz2mol import canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
 
 

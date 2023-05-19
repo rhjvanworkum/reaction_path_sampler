@@ -10,8 +10,8 @@
 from sklearn.metrics import roc_auc_score, accuracy_score
 import pandas as pd
 
-df = pd.read_csv('./data/DA_regio_solvent_success.csv')
-true_column, pred_column = 'label', 'xtb_labels'
+df = pd.read_csv('./data/DA_regio_no_solvent_success.csv')
+true_column, pred_column = 'label', 'xtb_ensemble_2_labels'
 
 filtered_reaction_idxs = []
 for reaction_idx in df['reaction_idx'].unique():
