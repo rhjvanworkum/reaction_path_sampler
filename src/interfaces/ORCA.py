@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 import time
 import autode as ade
 from autode.atoms import Atom
@@ -8,12 +8,16 @@ from autode.wrappers.ORCA import ORCA
 from autode.utils import run_in_tmp_environment, work_in_tmp_dir
 
 def get_autode_species(
-    xyz_string: str,
+    xyz_string: Union[list, str],
     charge: int,
     mult: int,
     solvent: str
 ) -> ade.Species:
-    atom_lines = xyz_string.split('\n')
+    if isinstance(xyz_string, list):
+        atom_lines = xyz_string
+    else:
+        atom_lines = xyz_string.split('\n')
+    
     atoms = []
 
     for line in atom_lines:
@@ -33,7 +37,7 @@ def get_autode_species(
     )
 
 def orca_driver(
-    xyz_string: str,
+    xyz_string: Union[list, str],
     charge: int,
     mult: int,
     job: Literal["sp"] = "sp",

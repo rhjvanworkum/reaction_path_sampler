@@ -2,20 +2,19 @@
 ### 1. GENERAL SETTINGS
 ###
 
-output_dir: './scratch/ac_base_test'
+output_dir: './scratch/ac_base_test_2'
 
 product_smiles:
 - "n1nn([O-])c2ncccc12"
-- "CC(=O)N"
-- "O"
+- "CC(=O)[NH3+]"
 reactant_smiles:
 - "n1nn(OC(=O)C)c2ncccc12"
 - "N"
-- "[OH-]"
-
 solvent: "Methanol"
 
-mix_param: 0.8
+sampling_method: metadynamics+topology
+force_conformer_sampling: False
+
 
 n_initial_complexes: 1
 max_n_aligned_screening_pairs: 1000
@@ -43,7 +42,7 @@ md_settings: {
   "step": 5,
   "dump": 20
 }
-md_time_per_atom: 1.5
+md_time_per_atom: 1.0
 md_settings_tight: {
   "shake": 0,
   "step": 2,

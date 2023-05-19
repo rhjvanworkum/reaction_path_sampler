@@ -7,17 +7,27 @@ Changes include:
 
 import os
 import autode
+import autode as ade
 from datetime import date
 from autode.mol_graphs import MolecularGraph
+from autode.species.complex import Complex
+from autode.bond_rearrangement import BondRearrangement
 from autode.config import Config
 from autode.log import logger
 from autode.mol_graphs import is_isomorphic
 from autode.exceptions import TemplateLoadingFailed
 from autode.solvent.solvents import get_solvent
+from autode.mol_graphs import (
+    get_mapping_ts_template,
+    get_truncated_active_mol_graph,
+)
+
 
 from autode.transition_states.templates import get_ts_template_folder_path, get_value_from_file, get_values_dict_from_file
 import numpy as np
+import networkx as nx
 
+from src.xyz2mol import read_xyz_string
 
 
 class TStemplate:
@@ -282,3 +292,52 @@ def get_ts_templates(folder_path=None):
 
     logger.info(f"Have {len(templates)} TS templates")
     return templates
+
+
+def save_ts_template(
+    tsopt: str,
+    complex: ade.Species,
+    bond_rearr: BondRearrangement,
+    output_dir: str
+) -> TStemplate:
+    _, coords = read_xyz_string(tsopt)
+    complex.coordinates = np.array(coords)
+
+    for bond in bond_rearr.all:
+        complex.graph.add_active_edge(*bond)
+    
+    truncated_graph = get_truncated_active_mol_graph(graph=complex.graph, active_bonds=bond_rearr.all)
+    
+    # bonds
+    for bond in bond_rearr.all:
+        truncated_graph.edges[bond]["distance"] = complex.distance(*bond)
+    
+    # cartesians
+    nx.set_node_attributes(truncated_graph, {node: complex.coordinates[node] for idx, node in enumerate(truncated_graph.nodes)}, 'cartesian')
+
+    ts_template = TStemplate(truncated_graph, species=complex)
+    ts_template.save(folder_path=f'{output_dir}/')
+
+    return ts_template
+
+
+
+def get_constraints_from_template(
+    complex: Complex,
+    bond_rearr: BondRearrangement,
+    ts_template: TStemplate,
+):
+    truncated_graph = get_truncated_active_mol_graph(graph=complex.graph, active_bonds=bond_rearr.all)
+
+    cartesian_constraints = {}
+    mapping = get_mapping_ts_template(
+        larger_graph=truncated_graph, smaller_graph=ts_template.graph
+    )
+    for node in truncated_graph.nodes:
+        try:
+            coords = ts_template.graph.nodes[mapping[node]]["cartesian"]
+            cartesian_constraints[node] = coords
+        except KeyError:
+            print(f"Couldn't find a mapping for atom {node}")
+
+    return cartesian_constraints

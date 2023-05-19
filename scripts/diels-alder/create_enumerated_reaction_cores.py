@@ -68,7 +68,7 @@ for k, v in substituents_likelihood_dict.items():
 
 if __name__ == "__main__":
     file_name = "./data/diels_alder_reaction_cores.txt"
-    n_rcs = 300
+    n_rcs = 1000
     ring_prob = 0.1
     rcs = []
 

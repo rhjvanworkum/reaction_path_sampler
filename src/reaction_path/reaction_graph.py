@@ -4,19 +4,108 @@ Each reaction path needs a mapping from the atom indexing in the reactant graph 
 
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any
 from tqdm import tqdm
+import time
+import timeout_decorator
 
 import networkx as nx
 
 import autode as ade
+from autode.species import Complex
 from autode.conformers.conformer import Conformer
 from autode.bond_rearrangement import get_bond_rearrangs, BondRearrangement
 from autode.mol_graphs import reac_graph_to_prod_graph
 
 from src.reaction_path.complexes import compute_optimal_coordinates
+from src.utils import remap_conformer
+from src.visualization.plotly import plot_networkx_mol_graph
 
 
+def get_reaction_graph_isomorphism(
+    rc_complex: Complex,
+    pc_complex: Complex,
+    settings: Any
+):
+    
+    # plot_networkx_mol_graph(rc_complex.conformers[0].graph, rc_complex.conformers[0].coordinates)
+    # plot_networkx_mol_graph(pc_complex.conformers[0].graph, pc_complex.conformers[0].coordinates)
+    # print('rc nodes/edges: ', rc_complex.graph.number_of_nodes(), rc_complex.graph.number_of_edges())
+    # print('pc nodes/edges: ', pc_complex.graph.number_of_nodes(), pc_complex.graph.number_of_edges())
+
+    # get all isomorphisms based on bond rearrangement
+    t = time.time()
+    # try:
+    bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(
+        rc_complex,
+        pc_complex
+    )
+    # except TimeoutError:
+    #     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms_from_rxn_mapper(
+    #         rc_complex,
+    #         pc_complex
+    #     )
+    print(f'Finding all possible graph isomorphisms took: {time.time() - t}')
+
+    # select best reaction isomorphism & remap reaction
+    t = time.time()
+    print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
+    isomorphism = select_ideal_isomorphism(
+        rc_conformers=rc_complex.conformers,
+        pc_conformers=pc_complex.conformers,
+        rc_species_complex_mapping=rc_complex.species_complex_mapping, 
+        pc_species_complex_mapping=pc_complex.species_complex_mapping, 
+        isomorphism_idx=isomorphism_idx,
+        isomorphisms=reaction_isomorphisms,
+        settings=settings
+    )
+    print(f'\nSelecting best isomorphism took: {time.time() - t}')
+
+    return bond_rearr, isomorphism, isomorphism_idx
+
+def map_reaction_complexes(
+    _rc_conformers: List[Conformer],
+    _pc_conformers: List[Conformer],
+    settings: Any,
+    rc_species_complex_mapping: Dict[int, List[int]],
+    pc_species_complex_mapping: Dict[int, List[int]],
+) -> Tuple[List[Conformer]]:
+    """
+    Function to make sure that all atoms in reactant & product complexes are aligned with each other
+    """
+    _, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(
+        _rc_conformers[0],
+        _pc_conformers[0]
+    )
+
+    # select best reaction isomorphism & remap reaction
+    t = time.time()
+    print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
+    isomorphism = select_ideal_isomorphism(
+        rc_conformers=_rc_conformers,
+        pc_conformers=_pc_conformers,
+        rc_species_complex_mapping=rc_species_complex_mapping, 
+        pc_species_complex_mapping=pc_species_complex_mapping,
+        isomorphism_idx=isomorphism_idx,
+        isomorphisms=reaction_isomorphisms,
+        settings=settings
+    )
+    print(f'\nSelecting best isomorphism took: {time.time() - t}')
+
+    t = time.time()
+    print('remapping all conformers now ..')
+    # TODO: parallelize this?
+    if isomorphism_idx == 0:
+        rc_conformers = [remap_conformer(conf, isomorphism) for conf in _rc_conformers]
+        pc_conformers = _pc_conformers
+    elif isomorphism_idx == 1:
+        rc_conformers = _rc_conformers
+        pc_conformers = [remap_conformer(conf, isomorphism) for conf in _pc_conformers]
+
+    return rc_conformers, pc_conformers
+
+
+# @timeout_decorator.timeout(15, use_signals=False)
 def get_reaction_isomorphisms(
     rc_complex: ade.Species,
     pc_complex: ade.Species,
@@ -24,8 +113,6 @@ def get_reaction_isomorphisms(
     """
     This function returns all possible isomorphisms between the reactant & product graphs
     """
-    # TODO: I think there is some function here that can time out
-
     for idx, reaction_complexes in enumerate([
         [rc_complex, pc_complex],
         [pc_complex, rc_complex],
@@ -47,6 +134,29 @@ def get_reaction_isomorphisms(
 
                 if len(mappings) > 0:
                     return bond_rearr, mappings, idx
+
+def get_reaction_isomorphisms_from_rxn_mapper(
+    rc_complex: ade.Species,
+    pc_complex: ade.Species,
+) -> Tuple[BondRearrangement, Dict[int, int], int]:
+    """
+    This function returns all possible isomorphisms between the reactant & product graphs
+    """
+    mapping, bond_rearr, idx = None, None, None
+
+    for idx, reaction_complexes in enumerate([
+        [rc_complex, pc_complex],
+        [pc_complex, rc_complex],
+    ]):
+        bond_rearrs = get_bond_rearrangs(reaction_complexes[1], reaction_complexes[0], name='test')
+        if bond_rearrs is not None:
+            for bond_rearr in bond_rearrs:
+                bond_rearr = bond_rearr
+                idx = idx
+                break
+            break
+
+    # do something here
 
 
 def compute_isomorphism_score(args) -> float:
@@ -74,8 +184,8 @@ def compute_isomorphism_score(args) -> float:
 def select_ideal_isomorphism(
     rc_conformers: List[Conformer],
     pc_conformers: List[Conformer],
-    rc_species_complex_mapping, 
-    pc_species_complex_mapping,
+    rc_species_complex_mapping: Dict[int, List[int]], 
+    pc_species_complex_mapping: Dict[int, List[int]], 
     isomorphism_idx: int,
     isomorphisms: List[Dict[int, int]],
     settings: Any

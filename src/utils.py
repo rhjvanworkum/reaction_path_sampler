@@ -8,6 +8,11 @@ import os
 import re
 from openbabel import pybel
 
+def write_output_file(variable, name):
+    if variable is not None:
+        with open(name, 'w') as f:
+            f.writelines(variable)
+
 def get_canonical_smiles(smiles: str) -> str:
     return Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
 
@@ -89,6 +94,23 @@ def remove_whitespaces_from_xyz_strings(
     output_text = '\n'.join(lines)
     return output_text
 
+def xyz_string_to_geom(xyz_string: str) -> Tuple[List[str], np.array]:
+    lines = xyz_string.split('\n')
+    atoms, coords = [], []
+    for line in lines[2:]:
+        if len(line.split()) == 4:
+            a, x, y, z = line.split()
+            atoms.append(a)
+            coords.append([float(x), float(y), float(z)])
+    return atoms, np.array(coords)
+
+def geom_to_xyz_string(atoms: List[str], geom: np.array) -> str:
+    lines = []
+    lines.append(f'{len(atoms)}')
+    lines.append('')
+    for a, coord in zip(atoms, geom):
+        lines.append(f'{a} {coord[0]} {coord[1]} {coord[2]}')
+    return "\n".join(lines)
 
 """
 autodE utils
