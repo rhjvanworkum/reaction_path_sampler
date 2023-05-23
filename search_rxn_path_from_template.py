@@ -17,13 +17,13 @@ from autode.mol_graphs import (
 from autode.conformers.conformers import atoms_from_rdkit_mol
 from autode.conformers.conformer import Conformer
 
-from src.interfaces.PYSISYPHUS import pysisyphus_driver
-from src.interfaces.XTB import xtb_driver
-from src.interfaces.xtb_utils import get_fixing_constraints
-from src.reaction_path.reaction_ends import check_reaction_ends
-from src.ts_template import get_ts_templates
-from src.utils import autode_conf_to_xyz_string, get_canonical_smiles, write_output_file
-from src.xyz2mol import canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
+from reaction_path_sampler.src.interfaces.PYSISYPHUS import pysisyphus_driver
+from reaction_path_sampler.src.interfaces.XTB import xtb_driver
+from reaction_path_sampler.src.interfaces.xtb_utils import get_fixing_constraints
+from reaction_path_sampler.src.reaction_path.reaction_ends import check_reaction_ends
+from reaction_path_sampler.src.ts_template import get_ts_templates
+from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, write_output_file
+from reaction_path_sampler.src.xyz2mol import canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
 
 
 def search_reaction_path_from_template(settings: Any) -> None:
@@ -34,7 +34,6 @@ def search_reaction_path_from_template(settings: Any) -> None:
 
     # parse reaction SMILES
     if settings['reaction_smiles'] is not None:
-        print(settings['reaction_smiles'])
         reactants, products = settings['reaction_smiles'].split('>>')
         reactant_smiles = reactants.split('.')
         product_smiles = products.split('.')

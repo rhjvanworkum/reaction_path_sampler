@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
 
-from src.ts_template import TStemplate
+from reaction_path_sampler.src.ts_template import TStemplate
 
 from autode.bond_rearrangement import get_bond_rearrangs
 from autode.mol_graphs import (

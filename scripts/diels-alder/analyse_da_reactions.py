@@ -4,8 +4,6 @@ import os
 import tempfile
 import yaml
 import numpy as np
-from tqdm import tqdm
-
 
 if __name__ == "__main__":
     dataset_path = "./data/DA_regio_no_solvent_success.csv"
@@ -36,7 +34,7 @@ if __name__ == "__main__":
         else:
             label = int((barrier <= other_barriers).all())
             labels.append(label)
-    dataset['xtb_ensemble_2_labels'] = labels
+    dataset['test_label'] = labels
 
     # save dataset
     dataset.to_csv(dataset_path)

@@ -2,7 +2,7 @@
 from typing import List
 import autode as ade
 
-from src.conformational_sampling import ConformerSampler
+from reaction_path_sampler.src.conformational_sampling import ConformerSampler
 
 
 class AutodEConformerSampler(ConformerSampler):

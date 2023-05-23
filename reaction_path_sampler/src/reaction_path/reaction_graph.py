@@ -3,6 +3,7 @@ Each reaction path needs a mapping from the atom indexing in the reactant graph 
 """
 
 from concurrent.futures import ProcessPoolExecutor
+import logging
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
 from tqdm import tqdm
@@ -17,39 +18,32 @@ from autode.conformers.conformer import Conformer
 from autode.bond_rearrangement import get_bond_rearrangs, BondRearrangement
 from autode.mol_graphs import reac_graph_to_prod_graph
 
-from src.reaction_path.complexes import compute_optimal_coordinates
-from src.utils import remap_conformer
-from src.visualization.plotly import plot_networkx_mol_graph
+from reaction_path_sampler.src.reaction_path.complexes import compute_optimal_coordinates
+from reaction_path_sampler.src.utils import get_tqdm_disable, remap_conformer
+from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
 
 
 def get_reaction_graph_isomorphism(
     rc_complex: Complex,
     pc_complex: Complex,
-    settings: Any
+    settings: Any,
+    node_label: str = "atom_label"
 ):
-    
     # plot_networkx_mol_graph(rc_complex.conformers[0].graph, rc_complex.conformers[0].coordinates)
     # plot_networkx_mol_graph(pc_complex.conformers[0].graph, pc_complex.conformers[0].coordinates)
-    # print('rc nodes/edges: ', rc_complex.graph.number_of_nodes(), rc_complex.graph.number_of_edges())
-    # print('pc nodes/edges: ', pc_complex.graph.number_of_nodes(), pc_complex.graph.number_of_edges())
 
     # get all isomorphisms based on bond rearrangement
     t = time.time()
-    # try:
     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(
         rc_complex,
-        pc_complex
+        pc_complex,
+        node_label
     )
-    # except TimeoutError:
-    #     bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms_from_rxn_mapper(
-    #         rc_complex,
-    #         pc_complex
-    #     )
-    print(f'Finding all possible graph isomorphisms took: {time.time() - t}')
+    logging.info(f'Finding all possible graph isomorphisms took: {time.time() - t}')
 
     # select best reaction isomorphism & remap reaction
     t = time.time()
-    print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
+    logging.info(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
     isomorphism = select_ideal_isomorphism(
         rc_conformers=rc_complex.conformers,
         pc_conformers=pc_complex.conformers,
@@ -59,7 +53,7 @@ def get_reaction_graph_isomorphism(
         isomorphisms=reaction_isomorphisms,
         settings=settings
     )
-    print(f'\nSelecting best isomorphism took: {time.time() - t}')
+    logging.info(f'\nSelecting best isomorphism took: {time.time() - t}')
 
     return bond_rearr, isomorphism, isomorphism_idx
 
@@ -80,7 +74,7 @@ def map_reaction_complexes(
 
     # select best reaction isomorphism & remap reaction
     t = time.time()
-    print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
+    logging.info(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
     isomorphism = select_ideal_isomorphism(
         rc_conformers=_rc_conformers,
         pc_conformers=_pc_conformers,
@@ -90,10 +84,10 @@ def map_reaction_complexes(
         isomorphisms=reaction_isomorphisms,
         settings=settings
     )
-    print(f'\nSelecting best isomorphism took: {time.time() - t}')
+    logging.info(f'\nSelecting best isomorphism took: {time.time() - t}')
 
     t = time.time()
-    print('remapping all conformers now ..')
+    logging.info('remapping all conformers now ..')
     # TODO: parallelize this?
     if isomorphism_idx == 0:
         rc_conformers = [remap_conformer(conf, isomorphism) for conf in _rc_conformers]
@@ -109,6 +103,7 @@ def map_reaction_complexes(
 def get_reaction_isomorphisms(
     rc_complex: ade.Species,
     pc_complex: ade.Species,
+    node_label: str,
 ) -> Tuple[BondRearrangement, Dict[int, int], int]:
     """
     This function returns all possible isomorphisms between the reactant & product graphs
@@ -126,7 +121,7 @@ def get_reaction_isomorphisms(
                 for isomorphism in nx.vf2pp_all_isomorphisms(
                     graph1, 
                     graph2, 
-                    node_label="atom_label"
+                    node_label=node_label
                 ):
                     mappings.append(isomorphism)
 
@@ -211,7 +206,7 @@ def select_ideal_isomorphism(
         (isomorphism, species_complex_mapping, coords_no_remap, coords_to_remap) for isomorphism in isomorphisms
     ]
     with ProcessPoolExecutor(max_workers=int(settings['n_processes'] * settings['xtb_n_cores'])) as executor:
-        scores = list(tqdm(executor.map(compute_isomorphism_score, args), total=len(args), desc="Computing isomorphisms score"))
+        scores = list(tqdm(executor.map(compute_isomorphism_score, args), total=len(args), desc="Computing isomorphisms score", disable=get_tqdm_disable()))
 
     return isomorphisms[np.argmin(scores)]
 
@@ -265,6 +260,6 @@ def select_ideal_pair_isomorphism(
         (isomorphism, coords_no_remap, coords_to_remap) for isomorphism in isomorphisms
     ]
     with ProcessPoolExecutor(max_workers=int(settings['n_processes'] * settings['xtb_n_cores'])) as executor:
-        scores = list(tqdm(executor.map(compute_isomorphism_score_single, args), total=len(args), disable=True, desc="Computing isomorphisms score"))
+        scores = list(tqdm(executor.map(compute_isomorphism_score_single, args), total=len(args), disable=True, desc="Computing isomorphisms score", disable=get_tqdm_disable()))
 
     return isomorphisms[np.argmin(scores)]

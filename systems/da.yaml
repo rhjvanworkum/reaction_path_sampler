@@ -10,6 +10,7 @@ reactant_smiles: ["C=CC=CCCO", "C=C"]
 product_smiles: ["OCCC1C=CCCC1"]
 solvent: "Methanol"
 
+use_rxn_mapper: False
 sampling_method: metadynamics+topology
 force_conformer_sampling: False
 
@@ -21,7 +22,7 @@ allow_same_connectivity: True
 
 xtb_n_cores: 2
 xtb_n_cores_metadyn: 2
-n_processes: 4
+n_processes: 8
 
 xtb_method: "2"
 num_complex_sphere_points: 2

@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import yaml
 
-from src.reaction_path.complexes import generate_reactant_product_complexes
-from src.reaction_path.reaction_graph import get_reaction_isomorphisms
-from src.ts_template import TStemplate
+from reaction_path_sampler.src.reaction_path.complexes import generate_reactant_product_complexes
+from reaction_path_sampler.src.reaction_path.reaction_graph import get_reaction_isomorphisms
+from reaction_path_sampler.src.ts_template import TStemplate
 
 from autode.bond_rearrangement import get_bond_rearrangs
 from autode.mol_graphs import (

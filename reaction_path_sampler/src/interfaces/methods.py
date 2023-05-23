@@ -1,7 +1,7 @@
 from typing import Union, List
-from src.interfaces.ORCA import orca_driver
+from reaction_path_sampler.src.interfaces.ORCA import orca_driver
 
-from src.interfaces.XTB import xtb_driver
+from reaction_path_sampler.src.interfaces.XTB import xtb_driver
 
 def xtb_single_point_method(
     geometry: Union[str, List[str]],

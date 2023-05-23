@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from typing import Callable, Dict, List, Optional, Tuple, Any
 
@@ -16,6 +17,6 @@ def interpolate_geodesic(
     try:
         smoother.smooth(tol=settings['tol'], max_iter=settings['maxiter'])
     except Exception as e:
-        print(e)
+        logging.debug(e)
 
     return smoother

@@ -3,11 +3,11 @@ import tempfile
 from typing import Callable, List
 import numpy as np
 
-from src.conformational_sampling.metadyn_conformer_sampler import MetadynConformerSampler
-from src.interfaces.PYSISYPHUS import pysisyphus_driver
-from src.interfaces.methods import xtb_single_point_method
-from src.molecule import Molecule
-from src.utils import read_trajectory_file
+from reaction_path_sampler.src.conformational_sampling.metadyn_conformer_sampler import MetadynConformerSampler
+from reaction_path_sampler.src.interfaces.PYSISYPHUS import pysisyphus_driver
+from reaction_path_sampler.src.interfaces.methods import xtb_single_point_method
+from reaction_path_sampler.src.molecule import Molecule
+from reaction_path_sampler.src.utils import read_trajectory_file
 
 
 def compute_barrier(
@@ -59,7 +59,7 @@ def compute_barrier(
                 os.unlink(tmp.name)
 
     if not settings['sample_ts_conformers'] or (settings['sample_ts_conformers'] and ts is None):
-        ts = "\n".join(ts_geometry)
+        ts = "".join(ts_geometry)
 
     ts_energy = method(ts, charge, mult, solvent, n_cores=2)
 

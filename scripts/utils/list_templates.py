@@ -1,7 +1,7 @@
 import os
 import itertools
 
-from src.ts_template import TStemplate
+from reaction_path_sampler.src.ts_template import TStemplate
 
 def get_substitute_groups_from_da_template(template):
     dienophile_sets, diene_sets = [], []

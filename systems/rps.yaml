@@ -1,40 +1,38 @@
 ###
 ### 1. GENERAL SETTINGS
 ###
+# output dir
+output_dir: './scratch/da'
 
-output_dir: './scratch/new_61_test_test'
-
-product_smiles:
-- CC1C=CC(C)(C)C(C)(Br)C1(C)Br
-reactant_smiles:
-- '[H]C(C)=CC=C(C)C'
-- CC(Br)=C(C)Br
+# reaction
+reactant_smiles: ["C=CC=C", "C=C"]
+product_smiles: ["C1=CCCCC1"]
 solvent: "Methanol"
 
-sampling_method: metadynamics+topology
-force_conformer_sampling: False
+# task
+use_templates: False
+sample_ts_conformers: False
+barrier_method: "xtb"
 
-n_initial_complexes: 1
-max_n_aligned_screening_pairs: 1000
+# how many tries for finding a TS
 max_n_reactant_product_pairs: 5
-n_geodesic_retries: 1
-allow_same_connectivity: True
 
+# CPU core settings
+xtb_method: "2"
 xtb_n_cores: 2
 xtb_n_cores_metadyn: 2
 n_processes: 16
-
-xtb_method: "2"
-num_complex_sphere_points: 2
-num_complex_random_rotations: 2
-num_conformers: 50
 
 
 ###
 ### 2. CONFORMER SAMPLING SETTINGS
 ###
 
-# MD settings
+# sampling method
+sampling_method: metadynamics+topology
+force_conformer_sampling: False
+
+# MTD sampling settings
 md_settings: {
   "shake": 2,
   "step": 5,
@@ -46,20 +44,24 @@ md_settings_tight: {
   "step": 2,
   "dump": 20
 }
-
-# metadyn settings
+md_settings_tight: {
+  "shake": 0,
+  "step": 2,
+  "dump": 100
+}
 metadyn_settings: {
   'save': 200,
   'kpush': 1.0, 
   'alp': 0.200
 }
-
-# constraints
-force_constant: 1.0
-
-# wall
 cavity_scale: 0.8
 cavity_offset: 2.0
+
+# autodE sampling settings
+num_complex_sphere_points: 2
+num_complex_random_rotations: 2
+num_conformers: 50
+
 
 # CREGEN settings
 use_cregen_pruning: True
@@ -73,6 +75,11 @@ ref_energy_threshold: [0, 6.0, 6.0]
 rmsd_threshold: [0, 0.4, 0.1]
 conf_energy_threshold: [0, 0.01, 0.01]
 rotational_threshold: [0, 2.0, 2.0]
+
+ts_ref_energy_threshold: [0, 100, 100]
+ts_rmsd_threshold: [0, 2.0, 2.0]
+ts_conf_energy_threshold: [0, 0.00001, 0.00001]
+ts_rotational_threshold: [0, 0.04, 0.04]
 
 
 ### 

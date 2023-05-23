@@ -2,11 +2,11 @@
 ### 1. GENERAL SETTINGS
 ###
 # output dir
-output_dir: './scratch/newtest'
+output_dir: './scratch/ac2'
 
 # reaction
-reactant_smiles: ["C=CC=CCCO", "C=C"]
-product_smiles: ["OCCC1C=CCCC1"]
+reactant_smiles: ["n1nn(OC([O-])([NH3+])C)c2ncccc12"]
+product_smiles: ["CC(=O)N", "n1nn(O)c2ncccc12"]
 solvent: "Methanol"
 
 # task
@@ -21,7 +21,7 @@ max_n_reactant_product_pairs: 5
 xtb_method: "2"
 xtb_n_cores: 2
 xtb_n_cores_metadyn: 2
-n_processes: 16
+n_processes: 8
 
 
 ###

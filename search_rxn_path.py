@@ -1,8 +1,9 @@
 import argparse
+import logging
 import yaml
 import os
 
-from src.reaction_path_sampler import ReactionPathSampler
+from reaction_path_sampler.src.reaction_path_sampler import ReactionPathSampler
 
 def search_rxn_path():
     parser = argparse.ArgumentParser()
@@ -12,6 +13,10 @@ def search_rxn_path():
         type=str
     )
     args = parser.parse_args()
+
+    
+    logging.basicConfig()
+    logging.getLogger().setLevel(getattr(logging, os.environ["RPS_LOG_LEVEL"]))
 
     # open yaml settings
     with open(args.settings_file_path, "r") as f:
@@ -24,7 +29,7 @@ def search_rxn_path():
     conformer_pairs = reaction_path_sampler.select_promising_reactant_product_pairs(rc_conformers, pc_conformers)
 
     for idx, conformer_pair in enumerate(conformer_pairs):
-        print(f'Working on Reactant-Product Complex pair {idx}')
+        logging.info(f'Working on Reactant-Product Complex pair {idx}')
         
         output_dir = os.path.join(settings['output_dir'], f'{idx}')
         if not os.path.exists(output_dir):

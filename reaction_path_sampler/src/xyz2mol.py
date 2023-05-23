@@ -13,6 +13,7 @@ Implementation by Jan H. Jensen, based on the paper
 
 import copy
 import itertools
+import logging
 from typing import List
 
 from rdkit.Chem import rdmolops
@@ -94,7 +95,6 @@ def int_atom(atom):
     convert str atom to integer atom
     """
     global __ATOM_LIST__
-    #print(atom)
     atom = atom.lower()
     return __ATOM_LIST__.index(atom) + 1
 
@@ -441,7 +441,7 @@ def AC2BO(AC, atoms, charge, allow_charged_fragments=True, use_graph=True):
         # valence can't be smaller than number of neighbourgs
         possible_valence = [x for x in atomic_valence[atomicNum] if x >= valence]
         if not possible_valence:
-            print('Valence of atom',i,'is',valence,'which bigger than allowed max',max(atomic_valence[atomicNum]),'. Stopping')
+            logging.debug('Valence of atom',i,'is',valence,'which bigger than allowed max',max(atomic_valence[atomicNum]),'. Stopping')
             sys.exit()
         valences_list_of_lists.append(possible_valence)
 

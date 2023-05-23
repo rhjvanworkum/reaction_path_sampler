@@ -2,10 +2,10 @@ from typing import List, Dict, Any
 from openbabel import pybel
 import numpy as np
 
-from src.interfaces.XTB import xtb_driver
-from src.molecule import Molecule
-from src.constants import bohr_ang
-from src.utils import get_reactive_coordinate_value
+from reaction_path_sampler.src.interfaces.XTB import xtb_driver
+from reaction_path_sampler.src.molecule import Molecule
+from reaction_path_sampler.src.constants import bohr_ang
+from reaction_path_sampler.src.utils import get_reactive_coordinate_value
 
 
 def get_geometry_constraints(

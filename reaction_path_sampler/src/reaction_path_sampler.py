@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from typing import Dict, List, Tuple, Any
 import os
@@ -11,17 +12,18 @@ from autode.input_output import atoms_to_xyz_file
 
 from geodesic_interpolate.fileio import write_xyz as write_geodesic_xyz
 
-from src.conformational_sampling.sample_conformers import sample_reactant_and_product_conformers
-from src.interfaces.PYSISYPHUS import pysisyphus_driver
-from src.reaction_path.complexes import compute_optimal_coordinates, generate_reaction_complex, select_promising_reactant_product_pairs
-from src.reaction_path.barrier import compute_barrier
-from src.reaction_path.path_interpolation import interpolate_geodesic
-from src.reaction_path.reaction_ends import check_reaction_ends
-from src.reaction_path.reaction_graph import get_reaction_graph_isomorphism
-from src.ts_template import get_constraints_from_template, save_ts_template
-from src.utils import get_canonical_smiles, remap_conformer, set_autode_settings, write_output_file
-from src.xyz2mol import get_canonical_smiles_from_xyz_string
-from src.interfaces.methods import barrier_calculation_methods_dict
+from reaction_path_sampler.src.conformational_sampling.sample_conformers import sample_reactant_and_product_conformers
+from reaction_path_sampler.src.interfaces.PYSISYPHUS import pysisyphus_driver
+from reaction_path_sampler.src.reaction_path.complexes import compute_optimal_coordinates, generate_reaction_complex, select_promising_reactant_product_pairs
+from reaction_path_sampler.src.reaction_path.barrier import compute_barrier
+from reaction_path_sampler.src.reaction_path.mapped_complex import generate_mapped_reaction_complexes
+from reaction_path_sampler.src.reaction_path.path_interpolation import interpolate_geodesic
+from reaction_path_sampler.src.reaction_path.reaction_ends import check_reaction_ends
+from reaction_path_sampler.src.reaction_path.reaction_graph import get_reaction_graph_isomorphism
+from reaction_path_sampler.src.ts_template import get_constraints_from_template, save_ts_template
+from reaction_path_sampler.src.utils import get_canonical_smiles, remap_conformer, set_autode_settings, write_output_file
+from reaction_path_sampler.src.xyz2mol import get_canonical_smiles_from_xyz_string
+from reaction_path_sampler.src.interfaces.methods import barrier_calculation_methods_dict
 
 class ReactionPathSampler:
 
@@ -89,8 +91,15 @@ class ReactionPathSampler:
         """
         Generate reactant and product complexes using autodE.
         """
-        rc_complex = generate_reaction_complex(self.settings['reactant_smiles'])
-        pc_complex = generate_reaction_complex(self.settings['product_smiles'])
+        if self.settings['use_rxn_mapper']:
+            rc_complex, pc_complex = generate_mapped_reaction_complexes(
+                self.settings['reactant_smiles'],
+                self.settings['product_smiles'],
+                solvent=self.solvent
+            )
+        else:
+            rc_complex = generate_reaction_complex(self.settings['reactant_smiles'])
+            pc_complex = generate_reaction_complex(self.settings['product_smiles'])
 
         assert rc_complex.charge == pc_complex.charge
         assert pc_complex.mult == pc_complex.mult
@@ -107,10 +116,16 @@ class ReactionPathSampler:
         Map the reactant and product complexes to each other, such that atom ordering
         is the same in both geometries/complexes.
         """
+        if self.settings["use_rxn_mapper"]:
+            node_label = "atom_index"
+        else:
+            node_label = "atom_label"
+
         bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
             rc_complex=self.rc_complex, 
             pc_complex=self.pc_complex, 
-            settings=self.settings
+            settings=self.settings,
+            node_label=node_label
         )
 
         if isomorphism_idx == 0:
@@ -143,7 +158,7 @@ class ReactionPathSampler:
         Select the most promising reactant-product pairs to try and find a reaction path for.
         """
         t = time.time()
-        print('Selecting most promising Reactant-Product complexes now...')
+        logging.info('Selecting most promising Reactant-Product complexes now...')
         closest_pairs = select_promising_reactant_product_pairs(
             rc_conformers=rc_conformers,
             pc_conformers=pc_conformers,
@@ -151,8 +166,8 @@ class ReactionPathSampler:
             bonds=None,                         # currently unused
             settings=self.settings
         )
-        print(f'Selecting most promising Reactant-Product Complex pairs took: {time.time() - t}\n')
-        print(f'Selected Reactant-Product Complex pairs: {closest_pairs}\n\n')
+        logging.info(f'Selecting most promising Reactant-Product Complex pairs took: {time.time() - t}\n')
+        logging.info(f'Selected Reactant-Product Complex pairs: {closest_pairs}\n\n')
 
         return [[rc_conformers[idx[0]], pc_conformers[idx[1]]] for idx in closest_pairs]
 
@@ -187,7 +202,7 @@ class ReactionPathSampler:
         )
         write_geodesic_xyz(os.path.join(output_dir, 'geodesic_path.trj'), rc_conformer.atomic_symbols, curve.path)
         write_geodesic_xyz(os.path.join(output_dir, 'geodesic_path.xyz'), rc_conformer.atomic_symbols, curve.path)
-        print(f'geodesic interpolation: {time.time() - t}')
+        logging.info(f'geodesic interpolation: {time.time() - t}')
         
     def _perform_cos_and_tsopt(
         self,
@@ -201,7 +216,7 @@ class ReactionPathSampler:
             job="ts_search",
             solvent=self.solvent
         )
-        print(f'TS search time: {time.time() - t}, imaginary freq: {imaginary_freq}')
+        logging.info(f'TS search time: {time.time() - t}, imaginary freq: {imaginary_freq}')
 
         write_output_file(output, os.path.join(output_dir, 'ts_search.out'))
         write_output_file(cos_final_traj, os.path.join(output_dir, 'cos_final_traj.xyz'))
@@ -213,10 +228,10 @@ class ReactionPathSampler:
             if imaginary_freq < self.settings['min_ts_imaginary_freq'] and imaginary_freq > self.settings['max_ts_imaginary_freq']:
                     return True, tsopt, imaginary_freq
             else:
-                print(f"TS curvature, ({imaginary_freq} cm-1), is not within allowed interval \n\n")
+                logging.info(f"TS curvature, ({imaginary_freq} cm-1), is not within allowed interval \n\n")
                 return False, tsopt, imaginary_freq
         else:
-            print("TS optimization failed\n\n")
+            logging.info("TS optimization failed\n\n")
             return False, None, None
 
     def _perform_irc_calculation(
@@ -232,7 +247,7 @@ class ReactionPathSampler:
             job="irc",
             solvent=self.solvent
         )
-        print(f'IRC time: {time.time() - t} \n\n')
+        logging.info(f'IRC time: {time.time() - t} \n\n')
         write_output_file(output, os.path.join(output_dir, 'irc.out'))
 
         if None not in [backward_irc, forward_irc]:
@@ -245,10 +260,10 @@ class ReactionPathSampler:
                 return True, (backward_end, forward_end)
 
             else:
-                print("IRC end opt failed\n\n")
+                logging.info("IRC end opt failed\n\n")
                 return False, None
         else:
-            print("IRC failed\n\n")
+            logging.info("IRC failed\n\n")
             return False, None
 
     def _finalize_reaction(
@@ -264,9 +279,9 @@ class ReactionPathSampler:
         pred_rc_smi_list = get_canonical_smiles_from_xyz_string("".join(backward_end), self.charge)
         pred_pc_smi_list = get_canonical_smiles_from_xyz_string("".join(forward_end), self.charge)
 
-        print(true_rc_smi_list, pred_rc_smi_list)
-        print(true_pc_smi_list, pred_pc_smi_list)
-        print('\n\n')
+        logging.debug(true_rc_smi_list, pred_rc_smi_list)
+        logging.debug(true_pc_smi_list, pred_pc_smi_list)
+        logging.debug('\n\n')
 
         if check_reaction_ends(
             true_rc_smi_list,
@@ -307,7 +322,7 @@ class ReactionPathSampler:
             with open(os.path.join(final_dir, 'barrier.txt'), 'w') as f:
                 f.write(str(barrier))
 
-            print('finshed reaction \n\n')
+            logging.info('finshed reaction \n\n')
             
             return True
         

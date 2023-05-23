@@ -2,18 +2,17 @@ from concurrent.futures import ProcessPoolExecutor
 import os
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 from rxnmapper import RXNMapper
 import h5py as h5
 
-from src.interfaces.XTB import xtb_driver
-from src.utils import read_trajectory_file
+from reaction_path_sampler.src.utils import read_trajectory_file
 
 
 atomic_number_dict = {
     'H':  1,
     'O':  8,
     'N':  7,
+    'Si': 14,
     'P': 15,
     'B': 5,
     'Se': 34,
@@ -40,52 +39,27 @@ def xyz_string_to_geometry(xyz_string: str) -> Geometry:
         cartesians.append([float(x), float(y), float(z)])
     return Geometry(np.array(atomic_nums), np.array(cartesians))
 
-def compute_activation_energy(args) -> float:
-    r_geometry, ts_geometry, solvent = args
-    r_energy = xtb_driver(
-        xyz_string=r_geometry,
-        charge=0,
-        mult=1,
-        job="sp",
-        method="2",
-        solvent=solvent,
-        n_cores=4
-    )
-    ts_energy = xtb_driver(
-        xyz_string=ts_geometry,
-        charge=0,
-        mult=1,
-        job="sp",
-        method="2",
-        solvent=solvent,
-        n_cores=4
-    )
-    return ts_energy - r_energy
 
 if __name__ == "__main__":
-    # reaction_cores_path = "./data/diels_alder_reaction_cores.txt"
-    # path = "./scratch/diels_alder_reaction_cores/"
-    # name = "diels_alder_reaction_cores"
-    # dataset_name = "diels_alder_core_dataset"
-    # n_processes = 25
-    reaction_cores_path = "./data/test_da_reactions_reaction_core.csv"
-    path = "./scratch/da_reaction_cores_test/"
-    name = "da_reaction_cores_test"
-    dataset_name = "diels_alder_test_dataset"
-    n_processes = 25
+    reaction_dataset_path = "./data/DA_test_no_solvent.txt"
     
-    reaction_smiles_list = pd.read_csv(reaction_cores_path)['reaction_smiles'].values
+    path = "./scratch/DA_test_no_solvent/"
+    name = "DA_test_no_solvent"
+    dataset_name = "diels_alder_reaxys_rps_dataset"
 
-    # with open(reaction_cores_path, 'r') as f:
-    #     reaction_smiles_list = [line.replace('\n', '') for line in f.readlines()]
+
+    if reaction_dataset_path.split('.')[-1] == 'csv':
+        reaction_smiles_list = pd.read_csv(reaction_dataset_path)['reaction_smiles'].values
+    elif reaction_dataset_path.split('.')[-1] == 'txt':
+        with open(reaction_dataset_path, 'r') as f:
+            reaction_smiles_list = [line.replace('\n', '') for line in f.readlines()]
 
     idx_list = []
     for root, dirs, files in os.walk(path):
         if len(root.split('/')) > 3 and root.split('/')[-2] == name:
-            if os.path.exists(os.path.join(root, 'reaction.xyz')):
+            if os.path.exists(os.path.join(root, 'barrier.txt')):
                 idx_list.append(int(root.split('/')[-1]))
     idx_list = sorted(idx_list)
-
     successfull_reaction_smiles = [reaction_smiles_list[i] for i in idx_list]
 
     # atom-mapped reaction smiles
@@ -96,18 +70,17 @@ if __name__ == "__main__":
     
     # activation energies & geometries
     reactant_geometries, ts_geometries, product_geometries = [], [], []
-    ea_computation_arguments = []
+    activation_energies = []
     for i in idx_list:
         results_dir = os.path.join(path, f'{i}')
         reaction, _ = read_trajectory_file(os.path.join(results_dir, 'reaction.xyz'))
         reactant_geometries.append(xyz_string_to_geometry(reaction[0]))
         ts_geometries.append(xyz_string_to_geometry(reaction[1]))
         product_geometries.append(xyz_string_to_geometry(reaction[2]))
-        ea_computation_arguments.append((reaction[0], reaction[1], 'Methanol'))
 
-    with ProcessPoolExecutor(max_workers=n_processes) as executor:
-        activation_energies = list(tqdm(executor.map(compute_activation_energy, ea_computation_arguments), total=len(ea_computation_arguments), desc="Computing activation energies"))
-    activation_energies = np.array(activation_energies)
+        with open(os.path.join(results_dir, 'barrier.txt'), 'r') as f:
+            barrier = float(f.readlines()[0])
+            activation_energies.append(barrier)
 
     # add padding to all geometries
     max_n_atoms = max([geom.atomic_nums.shape[0] for geom in reactant_geometries])

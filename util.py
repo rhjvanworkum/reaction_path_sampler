@@ -11,7 +11,7 @@ from sklearn.metrics import roc_auc_score, accuracy_score
 import pandas as pd
 
 df = pd.read_csv('./data/DA_regio_no_solvent_success.csv')
-true_column, pred_column = 'label', 'xtb_ensemble_2_labels'
+true_column, pred_column = 'label', 'test_label'
 
 filtered_reaction_idxs = []
 for reaction_idx in df['reaction_idx'].unique():
@@ -64,9 +64,8 @@ print(accuracy_score(true, pred) * 100, "%", "accuracy")
 
 """ Cancel SLURM jobs """
 # import os
-# for i in range(41716, 43000):
-#     if i not in [41700]:
-#         os.system(f'scancel {i}')
+# for i in range(43882, 45000):
+#     os.system(f'scancel {i}')
 
 """ Keep only rc's & pc's from previous job """
 # import os
@@ -87,8 +86,8 @@ print(accuracy_score(true, pred) * 100, "%", "accuracy")
 # import os
 # i = 0
 # list = []
-# for root, dirs, files in os.walk('./scratch/DA_test_solvent/'):
-#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'DA_test_solvent':
+# for root, dirs, files in os.walk('./scratch/diels_alder_reaction_cores/'):
+#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'diels_alder_reaction_cores':
 #         if os.path.exists(os.path.join(root, 'reaction.xyz')):
             
 #             # for _, dirs, _ in os.walk(root):
@@ -137,8 +136,8 @@ print(accuracy_score(true, pred) * 100, "%", "accuracy")
 """ Plot interpolated paths stuff """
 # import matplotlib.pyplot as plt
 # import numpy as np
-# from src.molecule import read_xyz_string
-# from src.utils import read_trajectory_file
+# from reaction_path_sampler.src.molecule import read_xyz_string
+# from reaction_path_sampler.src.utils import read_trajectory_file
 
 # structures, _ = read_trajectory_file('better_path.xyz')
 # geometries = []

@@ -7,6 +7,14 @@ import numpy as np
 import os
 import re
 from openbabel import pybel
+import logging
+
+def get_tqdm_disable():
+    if logging.getLogger().getEffectiveLevel() > logging.INFO:
+        disable = True
+    else:
+        disable = False
+    return disable
 
 def write_output_file(variable, name):
     if variable is not None:
@@ -53,9 +61,6 @@ def read_trajectory_file(filepath: str, index=None, as_list=False) -> Tuple[List
             if len("".join(first_line.split())) == 0:
                 first_line = f.readline()
                 this_mol = first_line
-            # print(first_line)
-            # print(len("".join(first_line.split())))
-            # print('hello')
             natoms = int("".join(first_line.split()))
 
             comment_line = f.readline()

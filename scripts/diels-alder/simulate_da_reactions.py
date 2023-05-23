@@ -5,13 +5,10 @@ Script to compute a set of DA cycloadditions
 import yaml
 import os
 
-# TODO: do more in parallel
-# TODO: reduce amount of conformers that are optimized
-
 if __name__ == "__main__":
-    output_folder = './scratch/DA_test_solvent/'
+    output_folder = './scratch/diels_alder_reaction_cores/'
     base_settings_file = 'systems/rps.yaml'
-    file_path = 'data/DA_test_solvent.txt'
+    file_path = 'data/diels_alder_reaction_cores.txt'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -19,19 +16,12 @@ if __name__ == "__main__":
     with open(base_settings_file, "r") as f:
         settings = yaml.load(f, Loader=yaml.Loader)
 
-    reaction_smiles_list, xtb_solvent_list = [], []
+    reaction_smiles_list = []
     with open(file_path, 'r') as f:
         for line in f.readlines():
-            args = line.split(' ')
-            if len(args) == 3:
-                reaction_smiles, xtb_solvent, orca_solvent = args
-            elif len(args) == 4:
-                reaction_smiles, xtb_solvent, orca_solvent, orca_solvent_2 = args
-                orca_solvent += f' {orca_solvent_2}'
-            reaction_smiles_list.append(reaction_smiles)
-            xtb_solvent_list.append(xtb_solvent)
+            reaction_smiles_list.append(line.strip())
 
-    for idx, (reaction_smiles, solvent) in enumerate(zip(reaction_smiles_list, xtb_solvent_list)):
+    for idx, reaction_smiles in enumerate(reaction_smiles_list):
         output_dir = os.path.join(output_folder, f'{idx}')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -40,7 +30,7 @@ if __name__ == "__main__":
         reactants, products = reaction_smiles.split('>>')
         settings['reactant_smiles'] = reactants.split('.')
         settings['product_smiles'] = products.split('.')
-        settings['solvent'] = solvent
+        settings['solvent'] = "Methanol"
         settings['n_processes'] = 4
 
         # yaml file
@@ -54,7 +44,7 @@ if __name__ == "__main__":
             f.writelines([
                 '#!/bin/bash \n',
                 'source env.sh \n',
-                f'python -u search_rxn_path_2.py {os.path.join(output_folder, yaml_file_name)}'
+                f'python -u search_rxn_path.py {os.path.join(output_folder, yaml_file_name)}'
             ])
 
         # execute

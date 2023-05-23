@@ -1,6 +1,7 @@
 """
 File containing interface to Pysisyphus module
 """
+import logging
 from typing import Optional, Union, Literal, List, Any
 import subprocess
 import os
@@ -10,7 +11,7 @@ import h5py
 
 from autode.utils import run_in_tmp_environment, work_in_tmp_dir
 
-from src.utils import read_trajectory_file
+from reaction_path_sampler.src.utils import read_trajectory_file
 
 
 def construct_geometry_block(
@@ -90,7 +91,7 @@ def pysisyphus_driver(
     method: Literal["xtb", "orca"] = "xtb"
 ):
     if mult != 1:
-        print(f'WARNING: multiplicity is {mult}')
+        logging.info(f'WARNING: multiplicity is {mult}')
 
     settings_string = construct_geometry_block(
         files=[file.split('/')[-1] for file in geometry_files],
@@ -131,12 +132,11 @@ def pysisyphus_driver(
         GFORTRAN_UNBUFFERED_ALL=1
     )
     def execute_pysisyphus():
+        # for file in geometry_files:
+        #     shutil.copy(file, os.path.basename(file))
+
         with open('settings.yaml', 'w') as f:
             f.writelines(settings_string)
-
-        with open('/home/rhjvanworkum/reaction_path_sampler/settings.yaml', 'w') as f:
-            f.writelines(settings_string)
-
 
         cmd = f'pysis settings.yaml'
 
@@ -148,9 +148,9 @@ def pysisyphus_driver(
             )
         except Exception as e:
             output = ''
-            print(e)
+            logging.debug(e)
             if isinstance(e, subprocess.TimeoutExpired):
-                print('PYSISPHUS PROCESS TIMED OUT')
+                logging.debug('PYSISPHUS PROCESS TIMED OUT')
         
         if job == "ts_opt":
             tsopt = None
@@ -181,7 +181,7 @@ def pysisyphus_driver(
                 file = cycle_files[max([int(file.split('_')[-1].split('.')[0]) for file in cycle_files])]
                 cos_final_traj, _ = read_trajectory_file(file)
             except Exception as e:
-                print(e)
+                logging.debug(e)
         
             tsopt = None
             if os.path.exists('ts_opt.xyz'):

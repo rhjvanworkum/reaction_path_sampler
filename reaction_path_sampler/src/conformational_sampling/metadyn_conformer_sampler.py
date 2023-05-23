@@ -1,4 +1,5 @@
 from concurrent.futures import ProcessPoolExecutor
+import logging
 import autode as ade
 from autode.values import Distance
 from autode.species import Complex
@@ -11,13 +12,13 @@ from typing import List, Literal, Any, Dict, Optional, Union
 import numpy as np
 
 
-from src.conformational_sampling import ConformerSampler
-from src.interfaces.CREST import crest_driver
-from src.interfaces.XTB import xtb_driver
-from src.interfaces.xtb_utils import compute_wall_radius, get_atom_constraints, get_fixing_constraints, get_metadynamics_settings, get_wall_constraint
-from src.molecule import Molecule
-from src.utils import autode_conf_to_xyz_string, get_canonical_smiles, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms, sort_complex_conformers_on_distance
-from src.xyz2mol import get_canonical_smiles_from_xyz_string_ob
+from reaction_path_sampler.src.conformational_sampling import ConformerSampler
+from reaction_path_sampler.src.interfaces.CREST import crest_driver
+from reaction_path_sampler.src.interfaces.XTB import xtb_driver
+from reaction_path_sampler.src.interfaces.xtb_utils import compute_wall_radius, get_atom_constraints, get_fixing_constraints, get_metadynamics_settings, get_wall_constraint
+from reaction_path_sampler.src.molecule import Molecule
+from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, get_tqdm_disable, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms, sort_complex_conformers_on_distance
+from reaction_path_sampler.src.xyz2mol import get_canonical_smiles_from_xyz_string_ob
 
 def optimize_autode_conformer(args):
     xyz_string, charge, mult, solvent, method, xcontrol_settings, cores = args
@@ -81,8 +82,8 @@ class MetadynConformerSampler(ConformerSampler):
         # 1. sample conformers
         t = time.time()
         confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_ts", fixed_atoms=fixed_atoms)
-        print(f'metadyn sampling: {time.time() - t}')
-        print(f'metadyn sampled n conformers: {len(confs)}')
+        logging.info(f'metadyn sampling: {time.time() - t}')
+        logging.info(f'metadyn sampled n conformers: {len(confs)}')
 
         # 2. optimize conformers
         t = time.time()
@@ -91,7 +92,7 @@ class MetadynConformerSampler(ConformerSampler):
             conformers=confs,
             fixed_atoms=fixed_atoms
         )
-        print(f'optimizing conformers: {time.time() - t}')
+        logging.info(f'optimizing conformers: {time.time() - t}')
 
         # 3. prune conformer set
         t = time.time()
@@ -102,8 +103,8 @@ class MetadynConformerSampler(ConformerSampler):
             use_cregen_pruning=True,
             init="ts_"
         )
-        print(f'pruning conformers: {time.time() - t}')
-        print(f'conformers after pruning: {len(confs)}\n\n')
+        logging.info(f'pruning conformers: {time.time() - t}')
+        logging.info(f'conformers after pruning: {len(confs)}\n\n')
 
         return confs
 
@@ -125,13 +126,13 @@ class MetadynConformerSampler(ConformerSampler):
         # 1. sample conformers
         t = time.time()
         confs = self._sample_metadynamics_conformers(complex=complex, fixed_atoms=fixed_atoms)
-        print(f'metadyn sampling: {time.time() - t}')
-        print(f'metadyn sampled n conformers: {len(confs)}')
+        logging.info(f'metadyn sampling: {time.time() - t}')
+        logging.info(f'metadyn sampled n conformers: {len(confs)}')
 
         if len(confs) < 10:
             confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_tight", fixed_atoms=fixed_atoms)
-            print(f'metadyn sampling: {time.time() - t}')
-            print(f'metadyn sampled n conformers: {len(confs)}')
+            logging.info(f'metadyn sampling: {time.time() - t}')
+            logging.info(f'metadyn sampled n conformers: {len(confs)}')
 
         # 2. prune conformer set
         t = time.time()
@@ -142,8 +143,8 @@ class MetadynConformerSampler(ConformerSampler):
             use_cregen_pruning=True,
             init="init_"
         )
-        print(f'pruning conformers: {time.time() - t}')
-        print(f'conformers after pruning: {len(confs)}\n\n')
+        logging.info(f'pruning conformers: {time.time() - t}')
+        logging.info(f'conformers after pruning: {len(confs)}\n\n')
 
 
         # 3. optimize conformers
@@ -152,7 +153,7 @@ class MetadynConformerSampler(ConformerSampler):
             complex=complex,
             conformers=confs,
         )
-        print(f'optimizing conformers: {time.time() - t}')
+        logging.info(f'optimizing conformers: {time.time() - t}')
 
 
         # 4. prune conformer set
@@ -163,8 +164,8 @@ class MetadynConformerSampler(ConformerSampler):
             use_graph_pruning=True,
             use_cregen_pruning=self.settings['use_cregen_pruning']
         )
-        print(f'pruning conformers: {time.time() - t}')
-        print(f'conformers after pruning: {len(confs)}\n\n')
+        logging.info(f'pruning conformers: {time.time() - t}')
+        logging.info(f'conformers after pruning: {len(confs)}\n\n')
 
         return confs
     
@@ -227,7 +228,7 @@ class MetadynConformerSampler(ConformerSampler):
             (conf, complex, self.solvent, self.settings['xtb_method'], xcontrol_settings, self.settings['xtb_n_cores']) for conf in conformers
         ]
         with ProcessPoolExecutor(max_workers=self.settings['n_processes']) as executor:
-            opt_conformers = list(tqdm(executor.map(optimize_conformer, arguments), total=len(arguments), desc="Optimizing conformers"))
+            opt_conformers = list(tqdm(executor.map(optimize_conformer, arguments), total=len(arguments), desc="Optimizing conformers"), disable=get_tqdm_disable())
 
         opt_conformers = list(filter(lambda x: x is not None, opt_conformers))
         return opt_conformers
@@ -243,17 +244,3 @@ if __name__ == "__main__":
 
     with open('/home/ruard/code/test_reactions/settings.yaml', "r") as f:
         settings = yaml.load(f, Loader=yaml.Loader)
-
-    # rps = ReactiveComplexSampler(
-    #     smiles_strings=["[O]=[N+]([O-])CCCl", "[F-]"],
-    #     settings=settings,
-    #     n_initial_complexes=1
-    # )
-
-    # structures = rps.sample_reaction_complexes(
-    #     reactive_coordinate=[4,5],
-    #     min=0.5,
-    #     max=2.5,
-    #     n_points=10
-    # )
-    # print(len(structures))

@@ -1,6 +1,7 @@
 """
 File containing interface to XTB
 """
+import logging
 import os
 import subprocess
 from typing import Any, Dict, List, Literal, Optional
@@ -8,7 +9,7 @@ import time
 
 from autode.utils import run_in_tmp_environment, work_in_tmp_dir
 
-from src.utils import read_trajectory_file
+from reaction_path_sampler.src.utils import read_trajectory_file
 
 
 def xtb_driver(
@@ -22,7 +23,7 @@ def xtb_driver(
     n_cores: int = 4
 ):
     if mult != 1:
-        print(f'WARNING: multiplicity is {mult}')
+        logging.info(f'WARNING: multiplicity is {mult}')
 
     flags = [
         "--chrg",

@@ -5,6 +5,7 @@ Changes include:
 - TStemplate now also saves cartesian coords of TS
 """
 
+import logging
 import os
 import autode
 import autode as ade
@@ -27,7 +28,7 @@ from autode.transition_states.templates import get_ts_template_folder_path, get_
 import numpy as np
 import networkx as nx
 
-from src.xyz2mol import read_xyz_string
+from reaction_path_sampler.src.xyz2mol import read_xyz_string
 
 
 class TStemplate:
@@ -338,6 +339,6 @@ def get_constraints_from_template(
             coords = ts_template.graph.nodes[mapping[node]]["cartesian"]
             cartesian_constraints[node] = coords
         except KeyError:
-            print(f"Couldn't find a mapping for atom {node}")
+            logging.debug(f"Couldn't find a mapping for atom {node}")
 
     return cartesian_constraints

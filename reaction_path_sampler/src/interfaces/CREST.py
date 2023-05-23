@@ -6,7 +6,7 @@ import subprocess
 
 from autode.utils import run_in_tmp_environment, work_in_tmp_dir
 
-from src.utils import read_trajectory_file
+from reaction_path_sampler.src.utils import read_trajectory_file
 
 
 def crest_driver(

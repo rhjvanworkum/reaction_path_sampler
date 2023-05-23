@@ -1,6 +1,7 @@
 """
 Each reaction path needs a reactant + product complex
 """
+import logging
 import numpy as np
 from typing import Dict, List, Tuple, Any
 import os
@@ -11,12 +12,15 @@ from autode.species import Complex
 from autode.geom import get_rot_mat_kabsch
 from autode.conformers.conformer import Conformer
 
-from src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
+from reaction_path_sampler.src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 
 
 def generate_reaction_complex(
     smiles_strings: List[str],
 ) -> Complex:
+    """
+    Generates a reaction complex using autodE
+    """
     # create autodE complex object
     if len(smiles_strings) == 1:
         ade_complex = ade.Molecule(smiles=smiles_strings[0])
@@ -36,80 +40,9 @@ def generate_reaction_complex(
     ade.Config.num_conformers = 1
     ade.Config.max_num_complex_conformers = 1
     ade_complex._generate_conformers()
-    print(f'Generating autodE conformer took: {time.time() - t}')
+    logging.info(f'Generating autodE conformer took: {time.time() - t}')
 
     return ade_complex
-
-# def generate_reaction_complexes(
-#     smiles_strings: List[str],
-#     solvent: str,
-#     settings: Any,
-#     save_path: str,
-#     compute_conformers: bool = False
-# ) -> Tuple[List[Conformer]]:
-#     """
-#     Function that creates molecular complexes from provided SMILES strings
-#     :args smiles_strings: List of SMILES strings
-#     :args solvent: Solvent to be used
-#     :args settings: Settings object
-#     :args save_path: In which folder to save conformers of the molecular complex
-
-#     Returns:
-
-#     """
-#     rps = ReactiveComplexSampler(
-#         smiles_strings=smiles_strings,
-#         solvent=solvent,
-#         settings=settings
-#     )
-
-#     complex = rps._get_ade_complex()
-
-#     species_complex_mapping = None
-#     if len(smiles_strings) > 1:
-#         species_complex_mapping = {}
-#         mols = [ade.Molecule(smiles=smi) for smi in smiles_strings]
-#         tot_atoms = 0
-#         for idx, mol in enumerate(mols):
-#             species_complex_mapping[idx] = np.arange(tot_atoms, tot_atoms + len(mol.atoms))
-#             tot_atoms += len(mol.atoms)
-
-#     if compute_conformers:
-#         if os.path.exists(save_path):
-#             conformers, _ = read_trajectory_file(save_path)
-#             conformer_list = [Conformer(
-#                 atoms=xyz_string_to_autode_atoms(structure), 
-#                 charge=complex.charge, 
-#                 mult=complex.mult
-#             ) for structure in conformers]
-
-#         else:
-#             t = time.time()
-#             complexes = rps._sample_initial_complexes(complex)
-
-#             print(f'time to do autode sampling: {time.time() - t}')
-#             conformer_list = []
-#             conformer_xyz_list = []
-#             for complex in complexes:
-#                 conformers = rps.sample_reaction_complexes(complex=complex)
-#                 for conformer in conformers:
-#                     conformer_xyz_list.append(conformer)
-#                     conformer_list.append(Conformer(
-#                         atoms=xyz_string_to_autode_atoms(conformer), 
-#                         charge=complex.charge, 
-#                         mult=complex.mult
-#                     ))
-
-#             with open(save_path, 'w') as f:
-#                 f.writelines(remove_whitespaces_from_xyz_strings(conformer_xyz_list))
-
-#         return complex, conformer_list, len(smiles_strings), species_complex_mapping
-    
-#     else:
-
-#         return complex, len(smiles_strings), species_complex_mapping
-
-
 
 def select_promising_reactant_product_pairs(
     rc_conformers: List[Conformer],
@@ -142,11 +75,11 @@ def select_promising_reactant_product_pairs(
     scores = np.array(scores)  
 
     if len(scores) == 1:
-        print(f'Only 1 reactant & product complex was found')
+        logging.info(f'Only 1 reactant & product complex was found')
         opt_idxs = [indices[0]]
     elif len(scores) <= n_reactant_product_pairs:
         n_reactant_product_pairs = len(scores) - 1
-        print(f'reduced amount of reactant & product pairs to {n_reactant_product_pairs}')
+        logging.info(f'reduced amount of reactant & product pairs to {n_reactant_product_pairs}')
         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
     else:
         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]

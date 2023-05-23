@@ -1,12 +1,13 @@
 
+import logging
 from typing import Any, List
 import autode as ade
 
-from src.interfaces.CREST import crest_driver
-from src.interfaces.lewis import compute_adjacency_matrix
-from src.molecule import Molecule
-from src.xyz2mol import get_canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
-from src.utils import get_canonical_smiles
+from reaction_path_sampler.src.interfaces.CREST import crest_driver
+from reaction_path_sampler.src.interfaces.lewis import compute_adjacency_matrix
+from reaction_path_sampler.src.molecule import Molecule
+from reaction_path_sampler.src.xyz2mol import get_canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
+from reaction_path_sampler.src.utils import get_canonical_smiles
 
 class ConformerSampler:
 
@@ -60,7 +61,7 @@ class ConformerSampler:
                     if set(conf_smiles_list) == set(smiles_list):
                         pruned_conformers.append(conformer)
                 except Exception as e:
-                    print('Exception occured during XYZ -> SMILES: \n', e)
+                    logging.debug('Exception occured during XYZ -> SMILES: \n', e)
                     continue
             conformers = pruned_conformers
         
