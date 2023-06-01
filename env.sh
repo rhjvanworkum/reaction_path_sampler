@@ -3,7 +3,7 @@ export XTB_PATH="/home/rhjvanworkum/xtb-6.5.1/bin/xtb"
 
 export AUTODE_LOG_FILE="autode.log"
 export AUTODE_LOG_LEVEL=""
-export RPS_LOG_LEVEL="DEBUG"
+export RPS_LOG_LEVEL="INFO"
 
 # export ORCA_DIR="/home/rhjvanworkum/orca"
 # export PATH=$PATH:$ORCA_DIR

@@ -260,6 +260,6 @@ def select_ideal_pair_isomorphism(
         (isomorphism, coords_no_remap, coords_to_remap) for isomorphism in isomorphisms
     ]
     with ProcessPoolExecutor(max_workers=int(settings['n_processes'] * settings['xtb_n_cores'])) as executor:
-        scores = list(tqdm(executor.map(compute_isomorphism_score_single, args), total=len(args), disable=True, desc="Computing isomorphisms score", disable=get_tqdm_disable()))
+        scores = list(tqdm(executor.map(compute_isomorphism_score_single, args), total=len(args), desc="Computing isomorphisms score", disable=get_tqdm_disable()))
 
     return isomorphisms[np.argmin(scores)]

@@ -1,40 +1,39 @@
 ###
 ### 1. GENERAL SETTINGS
 ###
+# output dir
+output_dir: './scratch/da'
 
-output_dir: './scratch/da_test_test'
-
-# reactant_smiles: ["C1=CC=CO1", "C=C"]
-# product_smiles: ["C1=CC(O2)CCC12"]
+# reaction
 reactant_smiles: ["C=CC=CCCO", "C=C"]
 product_smiles: ["OCCC1C=CCCC1"]
 solvent: "Methanol"
 
-use_rxn_mapper: False
-sampling_method: metadynamics+topology
-force_conformer_sampling: False
+# task
+use_rxn_mapper: True
+use_templates: False
+sample_ts_conformers: False
+barrier_method: "xtb"
 
-n_initial_complexes: 1
-max_n_aligned_screening_pairs: 1000
+# how many tries for finding a TS
 max_n_reactant_product_pairs: 5
-n_geodesic_retries: 1
-allow_same_connectivity: True
 
+# CPU core settings
+xtb_method: "2"
 xtb_n_cores: 2
 xtb_n_cores_metadyn: 2
-n_processes: 8
-
-xtb_method: "2"
-num_complex_sphere_points: 2
-num_complex_random_rotations: 2
-num_conformers: 50
+n_processes: 16
 
 
 ###
 ### 2. CONFORMER SAMPLING SETTINGS
 ###
 
-# MD settings
+# sampling method
+sampling_method: metadynamics+topology
+force_conformer_sampling: False
+
+# MTD sampling settings
 md_settings: {
   "shake": 2,
   "step": 5,
@@ -46,33 +45,42 @@ md_settings_tight: {
   "step": 2,
   "dump": 20
 }
-
-# metadyn settings
+md_settings_tight: {
+  "shake": 0,
+  "step": 2,
+  "dump": 100
+}
 metadyn_settings: {
   'save': 200,
   'kpush': 1.0, 
   'alp': 0.200
 }
-
-# constraints
-force_constant: 1.0
-
-# wall
 cavity_scale: 0.8
 cavity_offset: 2.0
+
+# autodE sampling settings
+num_complex_sphere_points: 2
+num_complex_random_rotations: 2
+num_conformers: 50
+
 
 # CREGEN settings
 use_cregen_pruning: True
 
-init_ref_energy_threshold: [0, 600.0, 600.0, 600.0]
-init_rmsd_threshold: [0, 0.05, 0.05, 0.05]
-init_conf_energy_threshold: [0, 500.0, 500.0, 500.0]
-init_rotational_threshold: [0, 40.0, 40.0, 40.0]
+init_ref_energy_threshold: [0, 600.0, 600.0]
+init_rmsd_threshold: [0, 0.05, 0.05]
+init_conf_energy_threshold: [0, 500.0, 500.0]
+init_rotational_threshold: [0, 40.0, 40.0]
 
-ref_energy_threshold: [0, 6.0, 6.0, 6.0]
-rmsd_threshold: [0, 0.4, 0.1, 0.1]
-conf_energy_threshold: [0, 0.01, 0.01, 0.01]
-rotational_threshold: [0, 2.0, 2.0, 2.0]
+ref_energy_threshold: [0, 6.0, 6.0]
+rmsd_threshold: [0, 0.4, 0.1]
+conf_energy_threshold: [0, 0.01, 0.01]
+rotational_threshold: [0, 2.0, 2.0]
+
+ts_ref_energy_threshold: [0, 100, 100]
+ts_rmsd_threshold: [0, 2.0, 2.0]
+ts_conf_energy_threshold: [0, 0.00001, 0.00001]
+ts_rotational_threshold: [0, 0.04, 0.04]
 
 
 ### 

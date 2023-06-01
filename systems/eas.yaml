@@ -2,15 +2,15 @@
 ### 1. GENERAL SETTINGS
 ###
 # output dir
-output_dir: './scratch/da'
+output_dir: './scratch/eas'
 
 # reaction
-reactant_smiles: ["C=CC=C", "C=C"]
-product_smiles: ["C1=CCCCC1"]
+reactant_smiles: ['n1ccc[nH]1', '[Br]']
+product_smiles: ['Brc1cn[nH]c1', '[H]']
 solvent: "Methanol"
 
 # task
-use_rxn_mapper: False
+use_rxn_mapper: True
 use_templates: False
 sample_ts_conformers: False
 barrier_method: "xtb"

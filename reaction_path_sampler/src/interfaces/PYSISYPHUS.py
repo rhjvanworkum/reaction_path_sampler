@@ -71,7 +71,16 @@ def construct_opt_block() -> str:
     ])
 
 def construct_tsopt_block() -> str:
-    return "tsopt:\n type: rsirfo\n do_hess: True\n max_cycles: 75\n thresh: gau_tight\n hessian_recalc: 5\n\n"
+    string =  f"tsopt:\n" 
+    string += f" type: rsirfo\n"
+    string += f" do_hess: True\n"
+    string += f" max_cycles: 75\n"
+    string += f" thresh: gau_tight\n"
+    string += f" hessian_recalc: 5\n"
+    # string += f" geom:\n"
+    # string += f"  type: cart\n"
+    string += "\n"
+    return string
 
 def construct_irc_block() -> str:
     return "irc:\n type: eulerpc\n rms_grad_thresh: 0.0005\n\n"
@@ -133,7 +142,9 @@ def pysisyphus_driver(
     )
     def execute_pysisyphus():
         # for file in geometry_files:
-        #     shutil.copy(file, os.path.basename(file))
+        #     shutil.copy(file, f'./temp/{os.path.basename(file)}')
+
+        # os.chdir('./temp/')
 
         with open('settings.yaml', 'w') as f:
             f.writelines(settings_string)

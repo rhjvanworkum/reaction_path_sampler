@@ -14,6 +14,49 @@ from autode.conformers import Conformer
 from reaction_path_sampler.src.reaction_path.complexes import generate_reaction_complex
 
 
+# def calc_box(coords: np.ndarray):
+#     min_x, max_x = np.min(coords[:, 0]), np.max(coords[:, 0])
+#     min_y, max_y = np.min(coords[:, 1]), np.max(coords[:, 1])
+#     min_z, max_z = np.min(coords[:, 2]), np.max(coords[:, 2])
+#     return (min_x, min_y, min_z), (max_x, max_y, max_z)
+
+# def check_collision(bbox1, bbox2, dist):
+#     (min_x1, min_y1, min_z1), (max_x1, max_y1, max_z1) = bbox1
+#     (min_x2, min_y2, min_z2), (max_x2, max_y2, max_z2) = bbox2
+
+#     return (max_x1 >= (min_x2 + dist) or min_x1 <= (max_x2 + dist)) or \
+#            (max_y1 >= (min_y2 + dist) or min_y1 <= (max_y2 + dist)) or \
+#            (max_z1 >= (min_z2 + dist) or min_z1 <= (max_z2 + dist))
+
+# def calculate_move_vector(bbox1, bbox2, distance):
+#     (min_x1, min_y1, min_z1), (max_x1, max_y1, max_z1) = bbox1
+#     (min_x2, min_y2, min_z2), (max_x2, max_y2, max_z2) = bbox2
+
+#     move_vector = [0.0, 0.0, 0.0]
+#     move_vector[0] = max_x2 - min_x1 + distance
+#     move_vector[1] = max_y2 - min_y1 + distance
+#     move_vector[2] = max_z2 - min_z1 + distance
+
+#     return move_vector
+
+# def move_molecules_apart(coords1, coords2, distance=5.0):
+#     coords1 = np.array([
+#         c.tolist() for c in coords1
+#     ])
+#     coords2 = np.array([
+#         c.tolist() for c in coords2
+#     ])
+
+#     bbox1 = calc_box(coords1)
+#     bbox2 = calc_box(coords2)
+
+#     while check_collision(bbox1, bbox2, distance):
+#         move_vector = calculate_move_vector(bbox1, bbox2, distance)
+#         coords1 += move_vector
+#         bbox1 = calc_box(coords1)
+
+#     return coords1, coords2
+
 def map_rxn_smiles(rxn_smiles: str) -> str:
     """
     Map a reaction smiles using RXN Mapper
@@ -57,7 +100,7 @@ def get_autode_geometry_from_mapped_rdkit_conformer(mols: List[Chem.Mol]) -> Lis
     Returns a list of autodE atoms for an embedded RDKit conformer using the mapped
     SMILES string.
     """
-    min_dist = 7.0
+    min_dist = 12.0
 
     mols_atoms = []
     for idx, mol in enumerate(mols):

@@ -5,6 +5,22 @@ import os
 
 from reaction_path_sampler.src.reaction_path_sampler import ReactionPathSampler
 
+def set_log_level():
+    log_level_string = os.environ["RPS_LOG_LEVEL"]
+    if log_level_string == "DEBUG":
+        log_level = logging.DEBUG
+    if log_level_string == "WARNING":
+        log_level = logging.WARNING
+    if log_level_string == "INFO":
+        log_level = logging.INFO
+    if log_level_string == "ERROR":
+        log_level = logging.ERROR
+    if log_level_string == "CRITICAL":
+        log_level = logging.CRITICAL
+
+    logging.basicConfig()
+    logging.getLogger().setLevel(log_level)
+
 def search_rxn_path():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -14,9 +30,7 @@ def search_rxn_path():
     )
     args = parser.parse_args()
 
-    
-    logging.basicConfig()
-    logging.getLogger().setLevel(getattr(logging, os.environ["RPS_LOG_LEVEL"]))
+    set_log_level()
 
     # open yaml settings
     with open(args.settings_file_path, "r") as f:

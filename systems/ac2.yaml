@@ -7,9 +7,10 @@ output_dir: './scratch/ac2'
 # reaction
 reactant_smiles: ["n1nn(OC([O-])([NH3+])C)c2ncccc12"]
 product_smiles: ["CC(=O)N", "n1nn(O)c2ncccc12"]
-solvent: "Methanol"
+solvent: "DMF"
 
 # task
+use_rxn_mapper: False
 use_templates: False
 sample_ts_conformers: False
 barrier_method: "xtb"

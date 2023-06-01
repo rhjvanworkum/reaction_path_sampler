@@ -5,20 +5,16 @@ from autode.values import Distance
 from autode.species import Complex
 from autode.conformers.conformer import Conformer
 
-import os
 import time
 from tqdm import tqdm
-from typing import List, Literal, Any, Dict, Optional, Union
-import numpy as np
+from typing import List, Any, Dict, Optional, Union
 
 
 from reaction_path_sampler.src.conformational_sampling import ConformerSampler
-from reaction_path_sampler.src.interfaces.CREST import crest_driver
 from reaction_path_sampler.src.interfaces.XTB import xtb_driver
 from reaction_path_sampler.src.interfaces.xtb_utils import compute_wall_radius, get_atom_constraints, get_fixing_constraints, get_metadynamics_settings, get_wall_constraint
 from reaction_path_sampler.src.molecule import Molecule
-from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, get_tqdm_disable, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms, sort_complex_conformers_on_distance
-from reaction_path_sampler.src.xyz2mol import get_canonical_smiles_from_xyz_string_ob
+from reaction_path_sampler.src.utils import get_tqdm_disable, xyz_string_to_autode_atoms
 
 def optimize_autode_conformer(args):
     xyz_string, charge, mult, solvent, method, xcontrol_settings, cores = args
@@ -228,7 +224,7 @@ class MetadynConformerSampler(ConformerSampler):
             (conf, complex, self.solvent, self.settings['xtb_method'], xcontrol_settings, self.settings['xtb_n_cores']) for conf in conformers
         ]
         with ProcessPoolExecutor(max_workers=self.settings['n_processes']) as executor:
-            opt_conformers = list(tqdm(executor.map(optimize_conformer, arguments), total=len(arguments), desc="Optimizing conformers"), disable=get_tqdm_disable())
+            opt_conformers = list(tqdm(executor.map(optimize_conformer, arguments), total=len(arguments), desc="Optimizing conformers", disable=get_tqdm_disable()))
 
         opt_conformers = list(filter(lambda x: x is not None, opt_conformers))
         return opt_conformers

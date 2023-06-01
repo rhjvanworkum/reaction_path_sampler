@@ -21,7 +21,7 @@ from reaction_path_sampler.src.reaction_path.path_interpolation import interpola
 from reaction_path_sampler.src.reaction_path.reaction_ends import check_reaction_ends
 from reaction_path_sampler.src.reaction_path.reaction_graph import get_reaction_graph_isomorphism
 from reaction_path_sampler.src.ts_template import get_constraints_from_template, save_ts_template
-from reaction_path_sampler.src.utils import get_canonical_smiles, remap_conformer, set_autode_settings, write_output_file
+from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, remap_conformer, set_autode_settings, write_output_file
 from reaction_path_sampler.src.xyz2mol import get_canonical_smiles_from_xyz_string
 from reaction_path_sampler.src.interfaces.methods import barrier_calculation_methods_dict
 
@@ -117,16 +117,27 @@ class ReactionPathSampler:
         is the same in both geometries/complexes.
         """
         if self.settings["use_rxn_mapper"]:
-            node_label = "atom_index"
+            try:
+                bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
+                    rc_complex=self.rc_complex, 
+                    pc_complex=self.pc_complex, 
+                    settings=self.settings,
+                    node_label="atom_index"
+                )
+            except:
+                bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
+                    rc_complex=self.rc_complex, 
+                    pc_complex=self.pc_complex, 
+                    settings=self.settings,
+                    node_label="atom_label"
+                )
         else:
-            node_label = "atom_label"
-
-        bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
-            rc_complex=self.rc_complex, 
-            pc_complex=self.pc_complex, 
-            settings=self.settings,
-            node_label=node_label
-        )
+            bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
+                rc_complex=self.rc_complex, 
+                pc_complex=self.pc_complex, 
+                settings=self.settings,
+                node_label="atom_label"
+            )
 
         if isomorphism_idx == 0:
             self.rc_complex.conformers = [remap_conformer(conf, isomorphism) for conf in self.rc_complex.conformers]
@@ -279,9 +290,9 @@ class ReactionPathSampler:
         pred_rc_smi_list = get_canonical_smiles_from_xyz_string("".join(backward_end), self.charge)
         pred_pc_smi_list = get_canonical_smiles_from_xyz_string("".join(forward_end), self.charge)
 
-        logging.debug(true_rc_smi_list, pred_rc_smi_list)
-        logging.debug(true_pc_smi_list, pred_pc_smi_list)
-        logging.debug('\n\n')
+        print(f'True RC: {".".join(true_rc_smi_list)}, pred RC: {".".join(pred_rc_smi_list)}')
+        print(f'True PC: {".".join(true_pc_smi_list)}, pred PC: {".".join(pred_pc_smi_list)}')
+        print('\n\n')
 
         if check_reaction_ends(
             true_rc_smi_list,
