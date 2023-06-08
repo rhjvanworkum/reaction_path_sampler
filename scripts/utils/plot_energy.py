@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-file = './scratch/da_reaction_cores_test/4/0/cos_final_traj.xyz'
+file = './scratch/ac2_primary/0/cos_final_traj.xyz'
 
 with open(file, 'r') as f:
     lines = f.readlines()

@@ -167,5 +167,5 @@ if __name__ == "__main__":
         reaction_smiles = f'{diene_smi}.{dienophile_smi}>>{Chem.MolToSmiles(products[0], isomericSmiles=True)}'
         reaction_smiles_list.append(reaction_smiles)
 
-    with open(file_name, 'w') as f:
-        f.writelines("\n".join(reaction_smiles_list))
+    # with open(file_name, 'w') as f:
+    #     f.writelines("\n".join(reaction_smiles_list))

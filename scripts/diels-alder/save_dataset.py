@@ -41,11 +41,17 @@ def xyz_string_to_geometry(xyz_string: str) -> Geometry:
 
 
 if __name__ == "__main__":
-    reaction_dataset_path = "./data/DA_test_no_solvent.txt"
-    
-    path = "./scratch/DA_test_no_solvent/"
-    name = "DA_test_no_solvent"
-    dataset_name = "diels_alder_reaxys_rps_dataset"
+    """ Diels Alder Reaxys test Dataset"""
+    # reaction_dataset_path = "./data/DA_test_no_solvent.txt"
+    # path = "./scratch/DA_test_no_solvent/"
+    # name = "DA_test_no_solvent"
+    # dataset_name = "diels_alder_reaxys_rps_dataset"
+
+    """ Diels Alder reaction core enumeration dataset"""
+    reaction_dataset_path = "./data/diels_alder_reaction_cores.txt"
+    path = "./scratch/diels_alder_reaction_cores/"
+    name = "diels_alder_reaction_cores"
+    dataset_name = "diels_alder_reaction_cores_dataset"
 
 
     if reaction_dataset_path.split('.')[-1] == 'csv':
@@ -100,7 +106,10 @@ if __name__ == "__main__":
 
     # save all to hdf5 file
     with open(f'./data/{dataset_name}.txt', 'w') as f:
-        f.writelines("\n".join(atom_mapped_reaction_smiles))
+        lines = [
+            f'{am_smiles} , {smiles}' for am_smiles, smiles in zip(atom_mapped_reaction_smiles, successfull_reaction_smiles)
+        ]
+        f.writelines("\n".join(lines))
 
     file = h5.File(f'./data/{dataset_name}.h5', 'w')
     file.create_dataset('activation_energies', data=np.array(activation_energies))
