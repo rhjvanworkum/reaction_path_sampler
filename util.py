@@ -7,24 +7,24 @@
 
 
 """ Compare DF results """
-from sklearn.metrics import roc_auc_score, accuracy_score
-import pandas as pd
+# from sklearn.metrics import roc_auc_score, accuracy_score
+# import pandas as pd
 
-df = pd.read_csv('./data/DA_regio_no_solvent_success.csv')
-true_column, pred_column = 'label', 'test_label'
+# df = pd.read_csv('./data/DA_regio_no_solvent_success.csv')
+# true_column, pred_column = 'label', 'test_label'
 
-filtered_reaction_idxs = []
-for reaction_idx in df['reaction_idx'].unique():
-    reaction_df = df[df['reaction_idx'] == reaction_idx]
-    if len(reaction_df[~reaction_df[pred_column].isna()]) == len(reaction_df):
-        filtered_reaction_idxs.append(reaction_idx)
+# filtered_reaction_idxs = []
+# for reaction_idx in df['reaction_idx'].unique():
+#     reaction_df = df[df['reaction_idx'] == reaction_idx]
+#     if len(reaction_df[~reaction_df[pred_column].isna()]) == len(reaction_df):
+#         filtered_reaction_idxs.append(reaction_idx)
 
-df = df[df['reaction_idx'].isin(filtered_reaction_idxs)]
-true, pred = df[true_column], df[pred_column]
+# df = df[df['reaction_idx'].isin(filtered_reaction_idxs)]
+# true, pred = df[true_column], df[pred_column]
 
-print('Converged calculations: ', len(df))
-print(roc_auc_score(true, pred) * 100, 'AUROC')
-print(accuracy_score(true, pred) * 100, "%", "accuracy")
+# print('Converged calculations: ', len(df))
+# print(roc_auc_score(true, pred) * 100, 'AUROC')
+# print(accuracy_score(true, pred) * 100, "%", "accuracy")
 
 
 # # df = pd.read_csv('./data/test_da_reactions_2.csv')
@@ -63,9 +63,9 @@ print(accuracy_score(true, pred) * 100, "%", "accuracy")
 
 
 """ Cancel SLURM jobs """
-# import os
-# for i in range(43882, 45000):
-#     os.system(f'scancel {i}')
+import os
+for i in range(47614, 50000):
+    os.system(f'scancel {i}')
 
 """ Keep only rc's & pc's from previous job """
 # import os

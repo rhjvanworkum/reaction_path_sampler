@@ -4,8 +4,8 @@ import networkx as nx
 import plotly.graph_objects as go
 import pandas as pd
 
-# COLOR_DF = pd.read_csv('./data/jmol_colors.csv')
-COLOR_DF = None
+COLOR_DF = pd.read_csv('./data/jmol_colors.csv')
+# COLOR_DF = None
 
 def get_color_of_atom(atom_symbol: str):
     color = np.array([
@@ -22,7 +22,7 @@ def plot_networkx_mol_graph(
     forming_bonds: Optional[List[Tuple[int]]] = None,
 ) -> None:
     if positions is None:
-        positions = nx.get_node_attributes(G, "pos")
+        positions = nx.get_node_attributes(G, "cartesian")
         x, y, z = zip(*positions.values())
     else:
         x, y, z = positions[:, 0], positions[:, 1], positions[:, 2]    
