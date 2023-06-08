@@ -39,11 +39,11 @@ def get_reaction_graph_isomorphism(
         pc_complex,
         node_label
     )
-    logging.info(f'Finding all possible graph isomorphisms took: {time.time() - t}')
+    print(f'Finding all possible graph isomorphisms took: {time.time() - t}')
 
     # select best reaction isomorphism & remap reaction
     t = time.time()
-    logging.info(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
+    print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
     isomorphism = select_ideal_isomorphism(
         rc_conformers=rc_complex.conformers,
         pc_conformers=pc_complex.conformers,
@@ -53,7 +53,7 @@ def get_reaction_graph_isomorphism(
         isomorphisms=reaction_isomorphisms,
         settings=settings
     )
-    logging.info(f'\nSelecting best isomorphism took: {time.time() - t}')
+    print(f'\nSelecting best isomorphism took: {time.time() - t}')
 
     return bond_rearr, isomorphism, isomorphism_idx
 
@@ -74,7 +74,7 @@ def map_reaction_complexes(
 
     # select best reaction isomorphism & remap reaction
     t = time.time()
-    logging.info(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
+    print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
     isomorphism = select_ideal_isomorphism(
         rc_conformers=_rc_conformers,
         pc_conformers=_pc_conformers,
@@ -84,10 +84,10 @@ def map_reaction_complexes(
         isomorphisms=reaction_isomorphisms,
         settings=settings
     )
-    logging.info(f'\nSelecting best isomorphism took: {time.time() - t}')
+    print(f'\nSelecting best isomorphism took: {time.time() - t}')
 
     t = time.time()
-    logging.info('remapping all conformers now ..')
+    print('remapping all conformers now ..')
     # TODO: parallelize this?
     if isomorphism_idx == 0:
         rc_conformers = [remap_conformer(conf, isomorphism) for conf in _rc_conformers]
@@ -115,6 +115,7 @@ def get_reaction_isomorphisms(
         bond_rearrs = get_bond_rearrangs(reaction_complexes[1], reaction_complexes[0], name='test')
         if bond_rearrs is not None:
             for bond_rearr in bond_rearrs:
+                print(bond_rearr)
                 graph1 = reaction_complexes[0].graph
                 graph2 = reac_graph_to_prod_graph(reaction_complexes[1].graph, bond_rearr)
                 mappings = []

@@ -121,14 +121,14 @@ class TopologyConformerSampler(ConformerSampler):
         confs = self._compute_ff_optimised_conformers(
             conformers=conformers
         )
-        logging.info(f'optimizing conformers with FF: {time.time() - t}')
+        print(f'optimizing conformers with FF: {time.time() - t}')
 
         # 2. Optimize conformers
         t = time.time()
         confs = self._optimize_conformers(
             conformers=confs,
         )
-        logging.info(f'optimizing conformers: {time.time() - t}')
+        print(f'optimizing conformers: {time.time() - t}')
 
         # 3. prune conformer set
         t = time.time()
@@ -138,8 +138,8 @@ class TopologyConformerSampler(ConformerSampler):
             use_graph_pruning=False,
             use_cregen_pruning=False
         )
-        logging.info(f'pruning conformers: {time.time() - t}')
-        logging.info(f'conformers after pruning: {len(confs)}\n\n')
+        print(f'pruning conformers: {time.time() - t}')
+        print(f'conformers after pruning: {len(confs)}\n\n')
 
         return confs
     

@@ -44,6 +44,8 @@ class ConformerSampler:
                 conf_energy_threshold=self.settings[f"{init}conf_energy_threshold"][len(self.smiles_strings)],
                 rotational_threshold=self.settings[f"{init}rotational_threshold"][len(self.smiles_strings)],
             )
+
+        print(len(conformers))
         
         if use_graph_pruning:
             pruned_conformers = []
@@ -58,10 +60,11 @@ class ConformerSampler:
             for conformer in conformers:
                 try:
                     conf_smiles_list = get_canonical_smiles_from_xyz_string(conformer, initial_geometry.charge)
+                    print(conf_smiles_list, smiles_list)
                     if set(conf_smiles_list) == set(smiles_list):
                         pruned_conformers.append(conformer)
                 except Exception as e:
-                    logging.debug('Exception occured during XYZ -> SMILES: \n', e)
+                    print('Exception occured during XYZ -> SMILES: \n', e)
                     continue
             conformers = pruned_conformers
         

@@ -23,7 +23,7 @@ def xtb_driver(
     n_cores: int = 4
 ):
     if mult != 1:
-        logging.info(f'WARNING: multiplicity is {mult}')
+        print(f'WARNING: multiplicity is {mult}')
 
     flags = [
         "--chrg",

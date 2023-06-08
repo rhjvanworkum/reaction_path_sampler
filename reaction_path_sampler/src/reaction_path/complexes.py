@@ -40,7 +40,7 @@ def generate_reaction_complex(
     ade.Config.num_conformers = 1
     ade.Config.max_num_complex_conformers = 1
     ade_complex._generate_conformers()
-    logging.info(f'Generating autodE conformer took: {time.time() - t}')
+    print(f'Generating autodE conformer took: {time.time() - t}')
 
     return ade_complex
 
@@ -75,11 +75,11 @@ def select_promising_reactant_product_pairs(
     scores = np.array(scores)  
 
     if len(scores) == 1:
-        logging.info(f'Only 1 reactant & product complex was found')
+        print(f'Only 1 reactant & product complex was found')
         opt_idxs = [indices[0]]
     elif len(scores) <= n_reactant_product_pairs:
         n_reactant_product_pairs = len(scores) - 1
-        logging.info(f'reduced amount of reactant & product pairs to {n_reactant_product_pairs}')
+        print(f'reduced amount of reactant & product pairs to {n_reactant_product_pairs}')
         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
     else:
         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]

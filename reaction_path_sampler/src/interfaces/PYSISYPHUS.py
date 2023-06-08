@@ -100,7 +100,7 @@ def pysisyphus_driver(
     method: Literal["xtb", "orca"] = "xtb"
 ):
     if mult != 1:
-        logging.info(f'WARNING: multiplicity is {mult}')
+        print(f'WARNING: multiplicity is {mult}')
 
     settings_string = construct_geometry_block(
         files=[file.split('/')[-1] for file in geometry_files],
@@ -159,9 +159,9 @@ def pysisyphus_driver(
             )
         except Exception as e:
             output = ''
-            logging.debug(e)
+            print(e)
             if isinstance(e, subprocess.TimeoutExpired):
-                logging.debug('PYSISPHUS PROCESS TIMED OUT')
+                print('PYSISPHUS PROCESS TIMED OUT')
         
         if job == "ts_opt":
             tsopt = None
@@ -192,7 +192,7 @@ def pysisyphus_driver(
                 file = cycle_files[max([int(file.split('_')[-1].split('.')[0]) for file in cycle_files])]
                 cos_final_traj, _ = read_trajectory_file(file)
             except Exception as e:
-                logging.debug(e)
+                print(e)
         
             tsopt = None
             if os.path.exists('ts_opt.xyz'):

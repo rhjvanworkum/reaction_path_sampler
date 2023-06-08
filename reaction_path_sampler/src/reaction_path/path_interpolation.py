@@ -17,6 +17,6 @@ def interpolate_geodesic(
     try:
         smoother.smooth(tol=settings['tol'], max_iter=settings['maxiter'])
     except Exception as e:
-        logging.debug(e)
+        print(e)
 
     return smoother

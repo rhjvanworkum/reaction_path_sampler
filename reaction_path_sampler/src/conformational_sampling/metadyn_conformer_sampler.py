@@ -78,8 +78,8 @@ class MetadynConformerSampler(ConformerSampler):
         # 1. sample conformers
         t = time.time()
         confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_ts", fixed_atoms=fixed_atoms)
-        logging.info(f'metadyn sampling: {time.time() - t}')
-        logging.info(f'metadyn sampled n conformers: {len(confs)}')
+        print(f'metadyn sampling: {time.time() - t}')
+        print(f'metadyn sampled n conformers: {len(confs)}')
 
         # 2. optimize conformers
         t = time.time()
@@ -88,7 +88,7 @@ class MetadynConformerSampler(ConformerSampler):
             conformers=confs,
             fixed_atoms=fixed_atoms
         )
-        logging.info(f'optimizing conformers: {time.time() - t}')
+        print(f'optimizing conformers: {time.time() - t}')
 
         # 3. prune conformer set
         t = time.time()
@@ -99,8 +99,8 @@ class MetadynConformerSampler(ConformerSampler):
             use_cregen_pruning=True,
             init="ts_"
         )
-        logging.info(f'pruning conformers: {time.time() - t}')
-        logging.info(f'conformers after pruning: {len(confs)}\n\n')
+        print(f'pruning conformers: {time.time() - t}')
+        print(f'conformers after pruning: {len(confs)}\n\n')
 
         return confs
 
@@ -122,13 +122,13 @@ class MetadynConformerSampler(ConformerSampler):
         # 1. sample conformers
         t = time.time()
         confs = self._sample_metadynamics_conformers(complex=complex, fixed_atoms=fixed_atoms)
-        logging.info(f'metadyn sampling: {time.time() - t}')
-        logging.info(f'metadyn sampled n conformers: {len(confs)}')
+        print(f'metadyn sampling: {time.time() - t}')
+        print(f'metadyn sampled n conformers: {len(confs)}')
 
         if len(confs) < 10:
             confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_tight", fixed_atoms=fixed_atoms)
-            logging.info(f'metadyn sampling: {time.time() - t}')
-            logging.info(f'metadyn sampled n conformers: {len(confs)}')
+            print(f'metadyn sampling: {time.time() - t}')
+            print(f'metadyn sampled n conformers: {len(confs)}')
 
         # 2. prune conformer set
         t = time.time()
@@ -139,8 +139,8 @@ class MetadynConformerSampler(ConformerSampler):
             use_cregen_pruning=True,
             init="init_"
         )
-        logging.info(f'pruning conformers: {time.time() - t}')
-        logging.info(f'conformers after pruning: {len(confs)}\n\n')
+        print(f'pruning conformers: {time.time() - t}')
+        print(f'conformers after pruning: {len(confs)}\n\n')
 
 
         # 3. optimize conformers
@@ -149,7 +149,7 @@ class MetadynConformerSampler(ConformerSampler):
             complex=complex,
             conformers=confs,
         )
-        logging.info(f'optimizing conformers: {time.time() - t}')
+        print(f'optimizing conformers: {time.time() - t}')
 
 
         # 4. prune conformer set
@@ -157,11 +157,11 @@ class MetadynConformerSampler(ConformerSampler):
         confs = self._prune_conformers(
             initial_geometry=complex,
             conformers=confs,
-            use_graph_pruning=True,
+            use_graph_pruning=False,
             use_cregen_pruning=self.settings['use_cregen_pruning']
         )
-        logging.info(f'pruning conformers: {time.time() - t}')
-        logging.info(f'conformers after pruning: {len(confs)}\n\n')
+        print(f'pruning conformers: {time.time() - t}')
+        print(f'conformers after pruning: {len(confs)}\n\n')
 
         return confs
     

@@ -441,7 +441,7 @@ def AC2BO(AC, atoms, charge, allow_charged_fragments=True, use_graph=True):
         # valence can't be smaller than number of neighbourgs
         possible_valence = [x for x in atomic_valence[atomicNum] if x >= valence]
         if not possible_valence:
-            logging.debug('Valence of atom',i,'is',valence,'which bigger than allowed max',max(atomic_valence[atomicNum]),'. Stopping')
+            print('Valence of atom',i,'is',valence,'which bigger than allowed max',max(atomic_valence[atomicNum]),'. Stopping')
             sys.exit()
         valences_list_of_lists.append(possible_valence)
 

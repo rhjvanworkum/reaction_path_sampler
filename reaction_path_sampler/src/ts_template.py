@@ -339,6 +339,6 @@ def get_constraints_from_template(
             coords = ts_template.graph.nodes[mapping[node]]["cartesian"]
             cartesian_constraints[node] = coords
         except KeyError:
-            logging.debug(f"Couldn't find a mapping for atom {node}")
+            print(f"Couldn't find a mapping for atom {node}")
 
     return cartesian_constraints
