@@ -5,6 +5,7 @@ import os
 
 from reaction_path_sampler.src.reaction_path_sampler import ReactionPathSampler
 
+# TODO: doesnt work
 def set_log_level():
     log_level_string = os.environ["RPS_LOG_LEVEL"]
     if log_level_string == "DEBUG":
@@ -43,7 +44,7 @@ def search_rxn_path():
     conformer_pairs = reaction_path_sampler.select_promising_reactant_product_pairs(rc_conformers, pc_conformers)
 
     for idx, conformer_pair in enumerate(conformer_pairs):
-        logging.info(f'Working on Reactant-Product Complex pair {idx}')
+        print(f'Working on Reactant-Product Complex pair {idx}')
         
         output_dir = os.path.join(settings['output_dir'], f'{idx}')
         if not os.path.exists(output_dir):

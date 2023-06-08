@@ -11,6 +11,7 @@ from autode.conformers.conformer import Conformer
 from autode.input_output import atoms_to_xyz_file
 
 from geodesic_interpolate.fileio import write_xyz as write_geodesic_xyz
+from reaction_path_sampler.src import ReactionSampler
 
 from reaction_path_sampler.src.conformational_sampling.sample_conformers import sample_reactant_and_product_conformers
 from reaction_path_sampler.src.interfaces.PYSISYPHUS import pysisyphus_driver
@@ -25,60 +26,13 @@ from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canon
 from reaction_path_sampler.src.xyz2mol import get_canonical_smiles_from_xyz_string
 from reaction_path_sampler.src.interfaces.methods import barrier_calculation_methods_dict
 
-class ReactionPathSampler:
+class ReactionPathSampler(ReactionSampler):
 
     def __init__(
         self,
         settings: Dict[str, Any]
     ) -> None:
-        self.settings = settings
-
-        # create output dir
-        if not os.path.exists(self.settings['output_dir']):
-            os.makedirs(self.settings['output_dir'])
-
-        # set autode settings
-        set_autode_settings(settings)
-
-        self._rc_complex = None
-        self._pc_complex = None
-
-        self.solvent = self.settings['solvent']
-        self._charge = None
-        self._mult = None
-
-        self._bond_rearr = None
-        self._isomorphism_idx = None
-
-    @property
-    def rc_complex(self) -> Complex:
-        if self._rc_complex is None:
-            raise ValueError('Reactant complex not set, call generate_reaction_complexes() first')
-        return self._rc_complex
-
-    @property
-    def pc_complex(self) -> Complex:
-        if self._pc_complex is None:
-            raise ValueError('Reactant complex not set, call generate_reaction_complexes() first')
-        return self._pc_complex
-
-    @property
-    def charge(self) -> int:
-        if self._charge is None:
-            raise ValueError('Charge not set, call generate_reaction_complexes() first')
-        return self._charge
-
-    @property
-    def mult(self) -> int:
-        if self._mult is None:
-            raise ValueError('Mult not set, call generate_reaction_complexes() first')
-        return self._mult
-    
-    @property
-    def bond_rearr(self) -> ade.bond_rearrangement.BondRearrangement:
-        if self._bond_rearr is None:
-            raise ValueError('Bond rearrangement not set, call map_reaction_complexes() first')
-        return self._bond_rearr
+        super().__init__(settings=settings)
 
     @property
     def isomorphism_idx(self) -> int:
@@ -86,28 +40,11 @@ class ReactionPathSampler:
             raise ValueError('Isomorphism index not set, call map_reaction_complexes() first')
         return self._isomorphism_idx
 
-
-    def generate_reaction_complexes(self) -> None:
-        """
-        Generate reactant and product complexes using autodE.
-        """
-        if self.settings['use_rxn_mapper']:
-            rc_complex, pc_complex = generate_mapped_reaction_complexes(
-                self.settings['reactant_smiles'],
-                self.settings['product_smiles'],
-                solvent=self.solvent
-            )
-        else:
-            rc_complex = generate_reaction_complex(self.settings['reactant_smiles'])
-            pc_complex = generate_reaction_complex(self.settings['product_smiles'])
-
-        assert rc_complex.charge == pc_complex.charge
-        assert pc_complex.mult == pc_complex.mult
-
-        self._rc_complex = rc_complex
-        self._pc_complex = pc_complex
-        self._charge = rc_complex.charge
-        self._mult = rc_complex.mult
+    @property
+    def bond_rearr(self) -> ade.bond_rearrangement.BondRearrangement:
+        if self._bond_rearr is None:
+            raise ValueError('Bond rearrangement not set, call map_reaction_complexes() first')
+        return self._bond_rearr
 
     def map_reaction_complexes(
         self,
@@ -169,7 +106,7 @@ class ReactionPathSampler:
         Select the most promising reactant-product pairs to try and find a reaction path for.
         """
         t = time.time()
-        logging.info('Selecting most promising Reactant-Product complexes now...')
+        print('Selecting most promising Reactant-Product complexes now...')
         closest_pairs = select_promising_reactant_product_pairs(
             rc_conformers=rc_conformers,
             pc_conformers=pc_conformers,
@@ -177,8 +114,8 @@ class ReactionPathSampler:
             bonds=None,                         # currently unused
             settings=self.settings
         )
-        logging.info(f'Selecting most promising Reactant-Product Complex pairs took: {time.time() - t}\n')
-        logging.info(f'Selected Reactant-Product Complex pairs: {closest_pairs}\n\n')
+        print(f'Selecting most promising Reactant-Product Complex pairs took: {time.time() - t}\n')
+        print(f'Selected Reactant-Product Complex pairs: {closest_pairs}\n\n')
 
         return [[rc_conformers[idx[0]], pc_conformers[idx[1]]] for idx in closest_pairs]
 
@@ -213,7 +150,7 @@ class ReactionPathSampler:
         )
         write_geodesic_xyz(os.path.join(output_dir, 'geodesic_path.trj'), rc_conformer.atomic_symbols, curve.path)
         write_geodesic_xyz(os.path.join(output_dir, 'geodesic_path.xyz'), rc_conformer.atomic_symbols, curve.path)
-        logging.info(f'geodesic interpolation: {time.time() - t}')
+        print(f'geodesic interpolation: {time.time() - t}')
         
     def _perform_cos_and_tsopt(
         self,
@@ -227,7 +164,7 @@ class ReactionPathSampler:
             job="ts_search",
             solvent=self.solvent
         )
-        logging.info(f'TS search time: {time.time() - t}, imaginary freq: {imaginary_freq}')
+        print(f'TS search time: {time.time() - t}, imaginary freq: {imaginary_freq}')
 
         write_output_file(output, os.path.join(output_dir, 'ts_search.out'))
         write_output_file(cos_final_traj, os.path.join(output_dir, 'cos_final_traj.xyz'))
@@ -239,10 +176,10 @@ class ReactionPathSampler:
             if imaginary_freq < self.settings['min_ts_imaginary_freq'] and imaginary_freq > self.settings['max_ts_imaginary_freq']:
                     return True, tsopt, imaginary_freq
             else:
-                logging.info(f"TS curvature, ({imaginary_freq} cm-1), is not within allowed interval \n\n")
+                print(f"TS curvature, ({imaginary_freq} cm-1), is not within allowed interval \n\n")
                 return False, tsopt, imaginary_freq
         else:
-            logging.info("TS optimization failed\n\n")
+            print("TS optimization failed\n\n")
             return False, None, None
 
     def _perform_irc_calculation(
@@ -258,7 +195,7 @@ class ReactionPathSampler:
             job="irc",
             solvent=self.solvent
         )
-        logging.info(f'IRC time: {time.time() - t} \n\n')
+        print(f'IRC time: {time.time() - t} \n\n')
         write_output_file(output, os.path.join(output_dir, 'irc.out'))
 
         if None not in [backward_irc, forward_irc]:
@@ -271,10 +208,10 @@ class ReactionPathSampler:
                 return True, (backward_end, forward_end)
 
             else:
-                logging.info("IRC end opt failed\n\n")
+                print("IRC end opt failed\n\n")
                 return False, None
         else:
-            logging.info("IRC failed\n\n")
+            print("IRC failed\n\n")
             return False, None
 
     def _finalize_reaction(
@@ -333,7 +270,7 @@ class ReactionPathSampler:
             with open(os.path.join(final_dir, 'barrier.txt'), 'w') as f:
                 f.write(str(barrier))
 
-            logging.info('finshed reaction \n\n')
+            print('finshed reaction \n\n')
             
             return True
         
