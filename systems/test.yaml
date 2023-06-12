@@ -2,23 +2,11 @@
 ### 1. GENERAL SETTINGS
 ###
 # output dir
-output_dir: './scratch/ac2_tertiary'
-
-# ["n1nn(OC([O-])([NH3+])C)c2ncccc12"]
-# ["CC(=O)[NH3+]", "n1nn([O-])c2ncccc12"]
-
-# ["n1nn(OC([O-])([NH2+]C)C)c2ncccc12"]
-# ["CC(=O)[NH2+]C", "n1nn([O-])c2ncccc12"]
-
-# ["n1nn(OC([O-])([NH+](C)C)C)c2ncccc12"]
-# ["CC(=O)[NH+](C)C", "n1nn([O-])c2ncccc12"]
-
-
-
+output_dir: './scratch/test'
 
 # reaction
-reactant_smiles: ["n1nn(OC([O-])([NH+](C)C)C)c2ncccc12"]
-product_smiles: ["CC(=O)[NH+](C)C", "n1nn([O-])c2ncccc12"]
+reactant_smiles: ["CC(=O)On2nnc1ccncc12", "NCC"]
+product_smiles: ["CC[NH2+]C(C)([O-])On2nnc1ccncc12"]
 solvent: "DMF"
 
 # task
@@ -111,4 +99,4 @@ maxiter: 15
 ### 4. TS optimization
 ###
 min_ts_imaginary_freq: -50
-max_ts_imaginary_freq: -2000
+max_ts_imaginary_freq: -1000

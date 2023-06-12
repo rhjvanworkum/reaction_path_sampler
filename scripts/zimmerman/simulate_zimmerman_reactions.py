@@ -4,9 +4,10 @@ from rdkit import Chem
 
 
 if __name__ == "__main__":
-    output_folder = './scratch/zimmerman_dataset/'
-    base_settings_file = 'systems/ac1.yaml'
-    file_path = 'data/zimmerman_reactions_am.txt'
+    output_folder = './scratch/michael_addition_meoh_3/'
+    base_settings_file = 'systems/ac2.yaml'
+    # file_path = 'data/zimmerman_reactions_am.txt'
+    file_path = 'data/test_set/ma_test_set.xyz'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -17,10 +18,10 @@ if __name__ == "__main__":
     reaction_smiles_list = []
     with open(file_path, 'r') as f:
         for line in f.readlines():
-            line = line.split(' ')[1]
+            # line = line.split(' ')[1]
             reaction_smiles_list.append(line.strip())
 
-    for idx, reaction_smiles in enumerate([reaction_smiles_list[38]]):
+    for idx, reaction_smiles in enumerate(reaction_smiles_list):
         output_dir = os.path.join(output_folder, f'{idx}')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -36,7 +37,7 @@ if __name__ == "__main__":
         reactants, products = reaction_smiles.split('>>')
         settings['reactant_smiles'] = reactants.split('.')
         settings['product_smiles'] = products.split('.')
-        settings['solvent'] = ""
+        settings['solvent'] = 'Methanol'
         settings['n_processes'] = 8
 
         # yaml file

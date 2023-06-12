@@ -64,7 +64,7 @@
 
 """ Cancel SLURM jobs """
 import os
-for i in range(47614, 50000):
+for i in range(48065, 50000):
     os.system(f'scancel {i}')
 
 """ Keep only rc's & pc's from previous job """
