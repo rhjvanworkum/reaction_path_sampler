@@ -15,6 +15,9 @@ from reaction_path_sampler.src.interfaces.lewis import compute_adjacency_matrix,
 from reaction_path_sampler.src.interfaces.xtb_utils import compute_wall_radius, get_wall_constraint
 from reaction_path_sampler.src.molecule import Molecule
 from reaction_path_sampler.src.utils import geom_to_xyz_string, get_tqdm_disable, xyz_string_to_geom
+from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
+
+from reaction_path_sampler.src.xyz2mol import xyz2AC, __ATOM_LIST__
 
 def optimize_conformer(args):
     conformer, charge, mult, solvent, method, xcontrol_settings, cores = args
@@ -105,10 +108,17 @@ class TopologyConformerSampler(ConformerSampler):
             solvent=solvent
         )
         self.mol = mol
-        self.adjacency_matrix = compute_adjacency_matrix(
-            elements=[a.atomic_symbol for a in self.mol.atoms],
-            geometry=self.mol.coordinates
-        )
+        # self.adjacency_matrix = compute_adjacency_matrix(
+        #     elements=[a.atomic_symbol for a in self.mol.atoms],
+        #     geometry=self.mol.coordinates
+        # )
+        # plot_networkx_mol_graph(self.mol.graph, self.mol.coordinates)
+        symbols, coords = self.mol.atomic_symbols, self.mol.coordinates
+        symbols = [
+            __ATOM_LIST__.index(s.lower()) + 1 for s in symbols
+        ]
+        self.adjacency_matrix, _ = xyz2AC(symbols, coords, self.mol.charge, use_huckel=True)
+        self.adjacency_matrix = self.adjacency_matrix.astype(np.float32)
 
         self.settings["wall_radius"] = compute_wall_radius(
             complex=Molecule.from_autode_mol(self.mol),
@@ -135,7 +145,7 @@ class TopologyConformerSampler(ConformerSampler):
         confs = self._prune_conformers(
             initial_geometry=self.mol,
             conformers=confs,
-            use_graph_pruning=False,
+            use_graph_pruning=True,
             use_cregen_pruning=False
         )
         print(f'pruning conformers: {time.time() - t}')

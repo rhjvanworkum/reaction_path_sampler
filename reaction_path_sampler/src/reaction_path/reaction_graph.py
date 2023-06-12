@@ -131,30 +131,6 @@ def get_reaction_isomorphisms(
                 if len(mappings) > 0:
                     return bond_rearr, mappings, idx
 
-def get_reaction_isomorphisms_from_rxn_mapper(
-    rc_complex: ade.Species,
-    pc_complex: ade.Species,
-) -> Tuple[BondRearrangement, Dict[int, int], int]:
-    """
-    This function returns all possible isomorphisms between the reactant & product graphs
-    """
-    mapping, bond_rearr, idx = None, None, None
-
-    for idx, reaction_complexes in enumerate([
-        [rc_complex, pc_complex],
-        [pc_complex, rc_complex],
-    ]):
-        bond_rearrs = get_bond_rearrangs(reaction_complexes[1], reaction_complexes[0], name='test')
-        if bond_rearrs is not None:
-            for bond_rearr in bond_rearrs:
-                bond_rearr = bond_rearr
-                idx = idx
-                break
-            break
-
-    # do something here
-
-
 def compute_isomorphism_score(args) -> float:
     isomorphism, species_complex_mapping, coords1, coords2 = args
 

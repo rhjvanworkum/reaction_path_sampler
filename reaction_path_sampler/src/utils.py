@@ -22,7 +22,10 @@ def write_output_file(variable, name):
             f.writelines(variable)
 
 def get_canonical_smiles(smiles: str) -> str:
-    return Chem.MolToSmiles(Chem.MolFromSmiles(smiles))
+    # TODO: this will not work for enantioselective reactions??
+    mol = Chem.MolFromSmiles(smiles)
+    Chem.RemoveStereochemistry(mol) 
+    return Chem.MolToSmiles(mol)
 
 def get_reactive_coordinate_value(
     mol: pybel.Molecule,

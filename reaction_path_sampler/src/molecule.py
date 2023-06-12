@@ -120,6 +120,21 @@ def read_xyz_string(xyz_string):
 
     return atoms
 
+def parse_geometry_from_xyz_string(xyz_string):
+    if type(xyz_string) == str:
+        xyz_string = xyz_string.split('\n')
+
+    symbols, coords = [], []
+    n_atoms = int(xyz_string[0])
+    _ = xyz_string[1]
+
+    for i in range(n_atoms):
+        data = xyz_string[2 + i].replace('\n', '').split(' ')
+        data = list(filter(lambda a: a != '', data))
+        symbols.append(data[0])
+        coords.append([float(data[1]), float(data[2]), float(data[3])])
+
+    return symbols, np.array(coords)
 
 def write_xyz_file(atoms: List[Atom], filename: str):
   with open(filename, 'w') as f:
