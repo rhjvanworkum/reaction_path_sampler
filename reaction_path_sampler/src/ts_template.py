@@ -28,7 +28,7 @@ from autode.transition_states.templates import get_ts_template_folder_path, get_
 import numpy as np
 import networkx as nx
 
-from reaction_path_sampler.src.xyz2mol import read_xyz_string
+from reaction_path_sampler.src.graphs.xyz2mol import read_xyz_string
 
 
 class TStemplate:

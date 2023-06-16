@@ -6,13 +6,13 @@ output_dir: './scratch/fca'
 
 # reaction
 reactant_smiles: ["[O+]#CCCc1ccccc1"]
-product_smiles: ["O=C1CCC2=CC=C[CH+]C12"]
+product_smiles: ["O=C1CCCC2=CC=C[CH+]C12"]
 solvent: "Methanol"
 
 # task
 use_rxn_mapper: False
 use_templates: False
-check_smiles_end: False
+check_smiles_end: True
 sample_ts_conformers: False
 barrier_method: "xtb"
 

@@ -26,7 +26,7 @@ from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_gra
 def get_reaction_graph_isomorphism(
     rc_complex: Complex,
     pc_complex: Complex,
-    settings: Any,
+    n_workers: int,
     node_label: str = "atom_label"
 ):
     # plot_networkx_mol_graph(rc_complex.conformers[0].graph, rc_complex.conformers[0].coordinates)
@@ -51,53 +51,11 @@ def get_reaction_graph_isomorphism(
         pc_species_complex_mapping=pc_complex.species_complex_mapping, 
         isomorphism_idx=isomorphism_idx,
         isomorphisms=reaction_isomorphisms,
-        settings=settings
+        n_workers=n_workers
     )
     print(f'\nSelecting best isomorphism took: {time.time() - t}')
 
     return bond_rearr, isomorphism, isomorphism_idx
-
-def map_reaction_complexes(
-    _rc_conformers: List[Conformer],
-    _pc_conformers: List[Conformer],
-    settings: Any,
-    rc_species_complex_mapping: Dict[int, List[int]],
-    pc_species_complex_mapping: Dict[int, List[int]],
-) -> Tuple[List[Conformer]]:
-    """
-    Function to make sure that all atoms in reactant & product complexes are aligned with each other
-    """
-    _, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(
-        _rc_conformers[0],
-        _pc_conformers[0]
-    )
-
-    # select best reaction isomorphism & remap reaction
-    t = time.time()
-    print(f'selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...')
-    isomorphism = select_ideal_isomorphism(
-        rc_conformers=_rc_conformers,
-        pc_conformers=_pc_conformers,
-        rc_species_complex_mapping=rc_species_complex_mapping, 
-        pc_species_complex_mapping=pc_species_complex_mapping,
-        isomorphism_idx=isomorphism_idx,
-        isomorphisms=reaction_isomorphisms,
-        settings=settings
-    )
-    print(f'\nSelecting best isomorphism took: {time.time() - t}')
-
-    t = time.time()
-    print('remapping all conformers now ..')
-    # TODO: parallelize this?
-    if isomorphism_idx == 0:
-        rc_conformers = [remap_conformer(conf, isomorphism) for conf in _rc_conformers]
-        pc_conformers = _pc_conformers
-    elif isomorphism_idx == 1:
-        rc_conformers = _rc_conformers
-        pc_conformers = [remap_conformer(conf, isomorphism) for conf in _pc_conformers]
-
-    return rc_conformers, pc_conformers
-
 
 # @timeout_decorator.timeout(15, use_signals=False)
 def get_reaction_isomorphisms(
@@ -160,7 +118,7 @@ def select_ideal_isomorphism(
     pc_species_complex_mapping: Dict[int, List[int]], 
     isomorphism_idx: int,
     isomorphisms: List[Dict[int, int]],
-    settings: Any
+    n_workers: int
 ) -> Dict[int, int]:
     """
     This function select the "true" graph isomorpism based on some RMSD calculations between
@@ -182,7 +140,7 @@ def select_ideal_isomorphism(
     args = [
         (isomorphism, species_complex_mapping, coords_no_remap, coords_to_remap) for isomorphism in isomorphisms
     ]
-    with ProcessPoolExecutor(max_workers=int(settings['n_processes'] * settings['xtb_n_cores'])) as executor:
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
         scores = list(tqdm(executor.map(compute_isomorphism_score, args), total=len(args), desc="Computing isomorphisms score", disable=get_tqdm_disable()))
 
     return isomorphisms[np.argmin(scores)]

@@ -12,7 +12,7 @@ from autode.species import Complex
 from autode.geom import get_rot_mat_kabsch
 from autode.conformers.conformer import Conformer
 
-from reaction_path_sampler.src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
+from reaction_path_sampler.src.utils import comp_adj_mat, read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 
 
 def generate_reaction_complex(
@@ -24,7 +24,7 @@ def generate_reaction_complex(
     # create autodE complex object
     if len(smiles_strings) == 1:
         ade_complex = ade.Molecule(smiles=smiles_strings[0])
-        ade_complex.species_complex_mapping = None
+        ade_complex.species_complex_mapping = {0: np.arange(len(ade_complex.atoms))}
     else:
         ade_complex = Complex(*[ade.Molecule(smiles=smi) for smi in smiles_strings])
         species_complex_mapping = {}
@@ -49,6 +49,7 @@ def select_promising_reactant_product_pairs(
     pc_conformers: List[Conformer],
     species_complex_mapping: Any,
     bonds: Any,
+    charge: int,
     settings: Any
 ) -> List[Tuple[int]]:
     """
@@ -82,7 +83,22 @@ def select_promising_reactant_product_pairs(
         print(f'reduced amount of reactant & product pairs to {n_reactant_product_pairs}')
         opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
     else:
-        opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
+        # check if the pairs don't have the same topology
+        opt_idxs = []
+        for idx in np.argsort(scores):
+            idxs = indices[idx]
+            # rc_conformer = rc_conformers[idxs[0]]
+            # pc_conformer = pc_conformers[idxs[1]]
+            # rc_adj_mat = comp_adj_mat(rc_conformer.atomic_symbols, rc_conformer.coordinates, charge)
+            # pc_adj_mat = comp_adj_mat(pc_conformer.atomic_symbols, pc_conformer.coordinates, charge)
+
+            # if np.sum(np.abs(rc_adj_mat - pc_adj_mat)) > 0:
+            opt_idxs.append(idxs)
+
+            if len(opt_idxs) == n_reactant_product_pairs:
+                break
+
+        # opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
     
     return opt_idxs
     

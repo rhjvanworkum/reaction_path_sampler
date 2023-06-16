@@ -13,7 +13,7 @@ from typing import List, Any, Dict, Optional, Union
 from reaction_path_sampler.src.conformational_sampling import ConformerSampler
 from reaction_path_sampler.src.interfaces.XTB import xtb_driver
 from reaction_path_sampler.src.interfaces.xtb_utils import compute_wall_radius, get_atom_constraints, get_fixing_constraints, get_metadynamics_settings, get_wall_constraint
-from reaction_path_sampler.src.molecule import Molecule
+from reaction_path_sampler.src.molecular_system import MolecularSystem
 from reaction_path_sampler.src.utils import get_tqdm_disable, xyz_string_to_autode_atoms
 
 def optimize_autode_conformer(args):
@@ -39,11 +39,11 @@ def optimize_autode_conformer(args):
 
 
 def optimize_conformer(args):
-    conformer, complex, solvent, method, xcontrol_settings, cores = args
+    conformer, mol, solvent, method, xcontrol_settings, cores = args
     return xtb_driver(
         conformer,
-        complex.charge,
-        complex.mult,
+        mol.charge,
+        mol.mult,
         "opt",
         method=method,
         solvent=solvent,
@@ -57,7 +57,8 @@ class MetadynConformerSampler(ConformerSampler):
         self,
         smiles_strings: int,
         solvent: str,
-        settings: Dict[str, Any]
+        settings: Dict[str, Any],
+        mol: MolecularSystem
     ) -> None:
         super().__init__(
             smiles_strings=smiles_strings,
@@ -65,75 +66,73 @@ class MetadynConformerSampler(ConformerSampler):
             solvent=solvent
         )
 
-    def sample_ts_conformers(
-        self,
-        complex: Molecule,
-        fixed_atoms: Optional[List[int]] = None, 
-    ) -> List[str]:     
-        self.settings["wall_radius"] = compute_wall_radius(
-            complex=complex,
-            settings=self.settings
-        )
+        self.mol = mol
 
-        # 1. sample conformers
-        t = time.time()
-        confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_ts", fixed_atoms=fixed_atoms)
-        print(f'metadyn sampling: {time.time() - t}')
-        print(f'metadyn sampled n conformers: {len(confs)}')
+    # def sample_ts_conformers(
+    #     self,
+    #     complex: Molecule,
+    #     fixed_atoms: Optional[List[int]] = None, 
+    # ) -> List[str]:     
+    #     self.settings["wall_radius"] = compute_wall_radius(
+    #         complex=complex,
+    #         settings=self.settings
+    #     )
 
-        # 2. optimize conformers
-        t = time.time()
-        confs = self._optimize_conformers(
-            complex=complex,
-            conformers=confs,
-            fixed_atoms=fixed_atoms
-        )
-        print(f'optimizing conformers: {time.time() - t}')
+    #     # 1. sample conformers
+    #     t = time.time()
+    #     confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_ts", fixed_atoms=fixed_atoms)
+    #     print(f'metadyn sampling: {time.time() - t}')
+    #     print(f'metadyn sampled n conformers: {len(confs)}')
 
-        # 3. prune conformer set
-        t = time.time()
-        confs = self._prune_conformers(
-            initial_geometry=complex,
-            conformers=confs,
-            use_graph_pruning=False,
-            use_cregen_pruning=True,
-            init="ts_"
-        )
-        print(f'pruning conformers: {time.time() - t}')
-        print(f'conformers after pruning: {len(confs)}\n\n')
+    #     # 2. optimize conformers
+    #     t = time.time()
+    #     confs = self._optimize_conformers(
+    #         complex=complex,
+    #         conformers=confs,
+    #         fixed_atoms=fixed_atoms
+    #     )
+    #     print(f'optimizing conformers: {time.time() - t}')
 
-        return confs
+    #     # 3. prune conformer set
+    #     t = time.time()
+    #     confs = self._prune_conformers(
+    #         initial_geometry=complex,
+    #         mol=self.mol,
+    #         conformers=confs,
+    #         use_graph_pruning=False,
+    #         use_cregen_pruning=True,
+    #         init="ts_"
+    #     )
+    #     print(f'pruning conformers: {time.time() - t}')
+    #     print(f'conformers after pruning: {len(confs)}\n\n')
 
+    #     return confs
+
+    # TODO: pass mol instead of using class attribute
     def sample_conformers(
         self, 
-        initial_geometry: Union[ade.Species, Molecule],
         fixed_atoms: Optional[List[int]] = None, 
-    ) -> List[str]:
-        if isinstance(initial_geometry, ade.Species):
-            complex = Molecule.from_autode_mol(initial_geometry)      
-        else:
-            complex = initial_geometry
-              
+    ) -> List[str]:    
         self.settings["wall_radius"] = compute_wall_radius(
-            complex=complex,
+            mol=self.mol,
             settings=self.settings
         )
 
         # 1. sample conformers
         t = time.time()
-        confs = self._sample_metadynamics_conformers(complex=complex, fixed_atoms=fixed_atoms)
+        confs = self._sample_metadynamics_conformers(mol=self.mol, fixed_atoms=fixed_atoms)
         print(f'metadyn sampling: {time.time() - t}')
         print(f'metadyn sampled n conformers: {len(confs)}')
 
         if len(confs) < 10:
-            confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_tight", fixed_atoms=fixed_atoms)
+            confs = self._sample_metadynamics_conformers(mol=self.mol, post_fix="_tight", fixed_atoms=fixed_atoms)
             print(f'metadyn sampling: {time.time() - t}')
             print(f'metadyn sampled n conformers: {len(confs)}')
 
         # 2. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
-            initial_geometry=complex,
+            mol=self.mol,
             conformers=confs,
             use_graph_pruning=False,
             use_cregen_pruning=True,
@@ -146,16 +145,18 @@ class MetadynConformerSampler(ConformerSampler):
         # 3. optimize conformers
         t = time.time()
         confs = self._optimize_conformers(
-            complex=complex,
+            mol=self.mol,
             conformers=confs,
         )
         print(f'optimizing conformers: {time.time() - t}')
 
+        with open('pre_filter_confs.xyz', 'w') as f:
+            f.writelines(confs)
 
         # 4. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
-            initial_geometry=complex,
+            mol=self.mol,
             conformers=confs,
             use_graph_pruning=True,
             use_cregen_pruning=self.settings['use_cregen_pruning']
@@ -167,7 +168,7 @@ class MetadynConformerSampler(ConformerSampler):
     
     def _sample_metadynamics_conformers(
         self, 
-        complex: Molecule, 
+        mol: MolecularSystem, 
         post_fix: str = "",
         fixed_atoms: Optional[List[int]] = None
     ) -> List[str]:
@@ -179,7 +180,7 @@ class MetadynConformerSampler(ConformerSampler):
             self.settings["wall_radius"]
         )
         xcontrol_settings += get_metadynamics_settings(
-            complex,
+            mol,
             self.settings,
             len(self.smiles_strings),
             post_fix=post_fix
@@ -192,9 +193,9 @@ class MetadynConformerSampler(ConformerSampler):
             )
 
         structures, _ = xtb_driver(
-            complex.to_xyz_string(),
-            complex.charge,
-            complex.mult,
+            mol.init_geometry_xyz_string,
+            mol.charge,
+            mol.mult,
             "metadyn",
             method=self.settings['xtb_method'],
             solvent=self.solvent,
@@ -205,7 +206,7 @@ class MetadynConformerSampler(ConformerSampler):
 
     def _optimize_conformers(
         self,
-        complex: Molecule,
+        mol: MolecularSystem,
         conformers: List[str],
         fixed_atoms: Optional[List[int]] = None
     ) -> List[str]:
@@ -221,7 +222,7 @@ class MetadynConformerSampler(ConformerSampler):
             )
         
         arguments = [
-            (conf, complex, self.solvent, self.settings['xtb_method'], xcontrol_settings, self.settings['xtb_n_cores']) for conf in conformers
+            (conf, mol, self.solvent, self.settings['xtb_method'], xcontrol_settings, self.settings['xtb_n_cores']) for conf in conformers
         ]
         with ProcessPoolExecutor(max_workers=self.settings['n_processes']) as executor:
             opt_conformers = list(tqdm(executor.map(optimize_conformer, arguments), total=len(arguments), desc="Optimizing conformers", disable=get_tqdm_disable()))

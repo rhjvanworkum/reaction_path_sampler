@@ -2,16 +2,27 @@
 ### 1. GENERAL SETTINGS
 ###
 # output dir
-output_dir: './scratch/test'
+output_dir: './scratch/test4'
 
 # reaction
-reactant_smiles: ["CC(=O)On2nnc1ccncc12", "NCC"]
-product_smiles: ["CC[NH2+]C(C)([O-])On2nnc1ccncc12"]
+# reactant_smiles: ["C=CC(=O)Nc1ccccn1", "C[S-]"]
+# product_smiles: ["CSC[CH-]C(=O)Nc1ccccn1"]
+
+# reactant_smiles: ["CC(=O)On2nnc1cccnc12", "NCC"]
+# product_smiles: ["CC[NH2+]C(C)([O-])On2nnc1cccnc12"]
+
+# reactant_smiles: ["CC[NH2+]C(C)([O-])On2nnc1cccnc12"]
+# product_smiles: ["CC(=O)([NH2+]CC)", "n([O-])2nnc1cccnc12"]
+
+reactant_smiles: ["CC[NH2+]C(C)([O-])On2nnc1cccnc12.N"]
+product_smiles: ["CC(=O)(NCC)", "n([O-])2nnc1cccnc12", "[NH4+]"]
+
 solvent: "DMF"
 
 # task
 use_rxn_mapper: False
 use_templates: False
+check_smiles_end: False
 sample_ts_conformers: False
 barrier_method: "xtb"
 
@@ -67,20 +78,20 @@ num_conformers: 50
 # CREGEN settings
 use_cregen_pruning: False
 
-init_ref_energy_threshold: [0, 600.0, 600.0]
-init_rmsd_threshold: [0, 0.05, 0.05]
-init_conf_energy_threshold: [0, 500.0, 500.0]
-init_rotational_threshold: [0, 40.0, 40.0]
+init_ref_energy_threshold: [0, 600.0, 600.0, 600.0]
+init_rmsd_threshold: [0, 0.05, 0.05, 0.05]
+init_conf_energy_threshold: [0, 500.0, 500.0, 500.0]
+init_rotational_threshold: [0, 40.0, 40.0, 40.0]
 
-ref_energy_threshold: [0, 6.0, 6.0]
-rmsd_threshold: [0, 0.4, 0.1]
-conf_energy_threshold: [0, 500.0, 500.0]
-rotational_threshold: [0, 20.0, 20.0]
+ref_energy_threshold: [0, 6.0, 6.0, 6.0]
+rmsd_threshold: [0, 0.4, 0.1, 0.1]
+conf_energy_threshold: [0, 500.0, 500.0, 500.0]
+rotational_threshold: [0, 20.0, 20.0, 20.0]
 
-ts_ref_energy_threshold: [0, 100, 100]
-ts_rmsd_threshold: [0, 2.0, 2.0]
-ts_conf_energy_threshold: [0, 0.00001, 0.00001]
-ts_rotational_threshold: [0, 0.04, 0.04]
+ts_ref_energy_threshold: [0, 100, 100, 100]
+ts_rmsd_threshold: [0, 2.0, 2.0, 2.0]
+ts_conf_energy_threshold: [0, 0.00001, 0.00001, 0.00001]
+ts_rotational_threshold: [0, 0.04, 0.04, 0.04]
 
 
 ### 

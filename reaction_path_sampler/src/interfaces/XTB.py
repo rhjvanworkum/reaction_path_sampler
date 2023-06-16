@@ -16,7 +16,7 @@ def xtb_driver(
     xyz_string: str,
     charge: int,
     mult: int,
-    job: Literal["sp", "opt", "scan", "metadyn"] = "sp",
+    job: Literal["sp", "mol", "opt", "scan", "metadyn"] = "sp",
     method: str = '2',
     solvent: Optional[str] = None,
     xcontrol_settings: Optional[str] = None,
@@ -85,6 +85,11 @@ def xtb_driver(
             if "TOTAL ENERGY" in line:
                 energy = float(line.split()[-3])
 
+        mol_string = None
+        if job == "mol" and os.path.exists('xtbtopo.mol'):
+            with open('xtbtopo.mol', 'r') as f:
+                mol_string = f.read()
+
         opt_structure = None
         if job == "opt" and os.path.exists('xtbopt.xyz'):
             opt_structures, _ = read_trajectory_file('xtbopt.xyz')
@@ -98,12 +103,14 @@ def xtb_driver(
         if job == "scan" and os.path.exists('xtbscan.log'):
             scan_structures, scan_energies  = read_trajectory_file("xtbscan.log")
    
-        return energy, opt_structure, md_structures, md_energies, scan_structures, scan_energies
+        return energy, mol_string, opt_structure, md_structures, md_energies, scan_structures, scan_energies
     
-    energy, opt_structure, md_structures, md_energies, scan_structures, scan_energies = execute_xtb()
+    energy, mol_string, opt_structure, md_structures, md_energies, scan_structures, scan_energies = execute_xtb()
     
     if job == "sp":
         return energy
+    elif job == "mol":
+        return mol_string
     elif job == "opt":
         return opt_structure
     elif job == "metadyn":

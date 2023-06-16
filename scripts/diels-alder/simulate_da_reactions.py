@@ -6,9 +6,9 @@ import yaml
 import os
 
 if __name__ == "__main__":
-    output_folder = './scratch/diels_alder_reaction_cores/'
+    output_folder = './scratch/diels_alder_reaction_cores_refac_test/'
     base_settings_file = 'systems/rps.yaml'
-    file_path = 'data/diels_alder_reaction_cores.txt'
+    file_path = 'data/diels_alder/diels_alder_reaction_cores.txt'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -21,7 +21,7 @@ if __name__ == "__main__":
         for line in f.readlines():
             reaction_smiles_list.append(line.strip())
 
-    for idx, reaction_smiles in enumerate(reaction_smiles_list):
+    for idx, reaction_smiles in enumerate(reaction_smiles_list[:8]):
         output_dir = os.path.join(output_folder, f'{idx}')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)

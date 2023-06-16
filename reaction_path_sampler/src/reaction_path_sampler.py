@@ -5,6 +5,8 @@ import os
 import time
 import shutil
 
+from rdkit import Chem
+
 import autode as ade
 from autode.species import Complex
 from autode.conformers.conformer import Conformer
@@ -15,6 +17,10 @@ from reaction_path_sampler.src import ReactionSampler
 
 from reaction_path_sampler.src.conformational_sampling.sample_conformers import sample_reactant_and_product_conformers
 from reaction_path_sampler.src.interfaces.PYSISYPHUS import pysisyphus_driver
+from reaction_path_sampler.src.interfaces.XTB import xtb_driver
+from reaction_path_sampler.src.interfaces.xtb_utils import comp_ad_mat_xtb
+from reaction_path_sampler.src.molecular_system import Reaction
+from reaction_path_sampler.src.molecule import parse_geometry_from_xyz_string
 from reaction_path_sampler.src.reaction_path.complexes import compute_optimal_coordinates, generate_reaction_complex, select_promising_reactant_product_pairs
 from reaction_path_sampler.src.reaction_path.barrier import compute_barrier
 from reaction_path_sampler.src.reaction_path.mapped_complex import generate_mapped_reaction_complexes
@@ -22,67 +28,67 @@ from reaction_path_sampler.src.reaction_path.path_interpolation import interpola
 from reaction_path_sampler.src.reaction_path.reaction_ends import check_reaction_ends
 from reaction_path_sampler.src.reaction_path.reaction_graph import get_reaction_graph_isomorphism
 from reaction_path_sampler.src.ts_template import get_constraints_from_template, save_ts_template
-from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, remap_conformer, set_autode_settings, write_output_file
-from reaction_path_sampler.src.xyz2mol import get_canonical_smiles_from_xyz_string
+from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, comp_adj_mat, get_adj_mat_from_mol_block_string, get_canonical_smiles, remap_conformer, set_autode_settings, visualize_graph, write_output_file
+from reaction_path_sampler.src.graphs.xyz2mol import get_canonical_smiles_from_xyz_string
 from reaction_path_sampler.src.interfaces.methods import barrier_calculation_methods_dict
 
 class ReactionPathSampler(ReactionSampler):
 
     def __init__(
         self,
-        settings: Dict[str, Any]
+        settings: Dict[str, Any],
+        reaction: Reaction
     ) -> None:
         super().__init__(settings=settings)
+        self.rc_complex = reaction.reactants.autode_complex
+        self.pc_complex = reaction.products.autode_complex
 
-    @property
-    def isomorphism_idx(self) -> int:
-        if self._isomorphism_idx is None:
-            raise ValueError('Isomorphism index not set, call map_reaction_complexes() first')
-        return self._isomorphism_idx
+        self.reaction = reaction
 
-    @property
-    def bond_rearr(self) -> ade.bond_rearrangement.BondRearrangement:
-        if self._bond_rearr is None:
-            raise ValueError('Bond rearrangement not set, call map_reaction_complexes() first')
-        return self._bond_rearr
+        self.isomorphism_idx = reaction._isomorphism_idx
+        self.bond_rearr = reaction._bond_rearr
 
-    def map_reaction_complexes(
-        self,
-    ) -> None:
-        """
-        Map the reactant and product complexes to each other, such that atom ordering
-        is the same in both geometries/complexes.
-        """
-        if self.settings["use_rxn_mapper"]:
-            try:
-                bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
-                    rc_complex=self.rc_complex, 
-                    pc_complex=self.pc_complex, 
-                    settings=self.settings,
-                    node_label="atom_index"
-                )
-            except:
-                bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
-                    rc_complex=self.rc_complex, 
-                    pc_complex=self.pc_complex, 
-                    settings=self.settings,
-                    node_label="atom_label"
-                )
-        else:
-            bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
-                rc_complex=self.rc_complex, 
-                pc_complex=self.pc_complex, 
-                settings=self.settings,
-                node_label="atom_label"
-            )
+        self.solvent = reaction.solvent
+        self.charge = reaction.reactants.charge
+        self.mult = reaction.reactants.mult
 
-        if isomorphism_idx == 0:
-            self.rc_complex.conformers = [remap_conformer(conf, isomorphism) for conf in self.rc_complex.conformers]
-        elif isomorphism_idx == 1:
-            self.pc_complex.conformers = [remap_conformer(conf, isomorphism) for conf in self.pc_complex.conformers]
+    # def map_reaction_complexes(
+    #     self,
+    # ) -> None:
+    #     """
+    #     Map the reactant and product complexes to each other, such that atom ordering
+    #     is the same in both geometries/complexes.
+    #     """
+    #     if self.settings["use_rxn_mapper"]:
+    #         try:
+    #             bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
+    #                 rc_complex=self.rc_complex, 
+    #                 pc_complex=self.pc_complex, 
+    #                 settings=self.settings,
+    #                 node_label="atom_index"
+    #             )
+    #         except:
+    #             bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
+    #                 rc_complex=self.rc_complex, 
+    #                 pc_complex=self.pc_complex, 
+    #                 settings=self.settings,
+    #                 node_label="atom_label"
+    #             )
+    #     else:
+    #         bond_rearr, isomorphism, isomorphism_idx = get_reaction_graph_isomorphism(
+    #             rc_complex=self.rc_complex, 
+    #             pc_complex=self.pc_complex, 
+    #             settings=self.settings,
+    #             node_label="atom_label"
+    #         )
 
-        self._bond_rearr = bond_rearr
-        self._isomorphism_idx = isomorphism_idx
+    #     if isomorphism_idx == 0:
+    #         self.rc_complex.conformers = [remap_conformer(conf, isomorphism) for conf in self.rc_complex.conformers]
+    #     elif isomorphism_idx == 1:
+    #         self.pc_complex.conformers = [remap_conformer(conf, isomorphism) for conf in self.pc_complex.conformers]
+
+    #     self._bond_rearr = bond_rearr
+    #     self._isomorphism_idx = isomorphism_idx
     
     def sample_reaction_complex_conformers(
         self,
@@ -91,8 +97,8 @@ class ReactionPathSampler(ReactionSampler):
         Sample conformers of both the reactant and product complexes.
         """
         rc_conformers, pc_conformers = sample_reactant_and_product_conformers(
-            rc_complex=self.rc_complex,
-            pc_complex=self.pc_complex,
+            self.reaction.reactants,
+            self.reaction.products,
             settings=self.settings
         )
         return rc_conformers, pc_conformers
@@ -100,7 +106,8 @@ class ReactionPathSampler(ReactionSampler):
     def select_promising_reactant_product_pairs(
         self,
         rc_conformers,
-        pc_conformers
+        pc_conformers,
+        charge
     ) -> List[List[Conformer]]:
         """
         Select the most promising reactant-product pairs to try and find a reaction path for.
@@ -112,6 +119,7 @@ class ReactionPathSampler(ReactionSampler):
             pc_conformers=pc_conformers,
             species_complex_mapping=None,       # currently unused
             bonds=None,                         # currently unused
+            charge=charge,
             settings=self.settings
         )
         print(f'Selecting most promising Reactant-Product Complex pairs took: {time.time() - t}\n')
@@ -223,7 +231,7 @@ class ReactionPathSampler(ReactionSampler):
         final_dir: str,
     ) -> bool:
         true_rc_smi_list = [get_canonical_smiles(smi) for smi in self.settings['reactant_smiles']]
-        true_pc_smi_list = [get_canonical_smiles(smi) for smi in self.settings['product_smiles']]
+        true_pc_smi_list = [get_canonical_smiles(smi) for smi in self.settings['product_smiles']]        
         pred_rc_smi_list = get_canonical_smiles_from_xyz_string("".join(backward_end), self.charge)
         pred_pc_smi_list = get_canonical_smiles_from_xyz_string("".join(forward_end), self.charge)
 
@@ -231,12 +239,59 @@ class ReactionPathSampler(ReactionSampler):
         print(f'True PC: {".".join(true_pc_smi_list)}, pred PC: {".".join(pred_pc_smi_list)}')
         print('\n\n')
 
-        if check_reaction_ends(
-            true_rc_smi_list,
-            true_pc_smi_list,
-            pred_rc_smi_list,
-            pred_pc_smi_list,
-        ):
+        if self.settings['check_smiles_end']:
+            match = check_reaction_ends(
+                true_rc_smi_list,
+                true_pc_smi_list,
+                pred_rc_smi_list,
+                pred_pc_smi_list,
+            )
+        else:
+            true_rc_adj_mat = self.reaction.reactants.connectivity_matrix
+            pred_rc_adj_mat = comp_ad_mat_xtb(
+                xyz_string="".join(backward_end),
+                charge=self.charge,
+                mult=self.mult,
+                solvent=self.solvent
+            )
+            # visualize_graph(symbols, coords, self.charge)
+
+            true_pc_adj_mat = self.reaction.products.connectivity_matrix
+            pred_pc_adj_mat = comp_ad_mat_xtb(
+                xyz_string="".join(forward_end),
+                charge=self.charge,
+                mult=self.mult,
+                solvent=self.solvent
+            )
+            # visualize_graph(symbols, coords, self.charge)
+
+            print(
+                np.sum(np.abs(true_rc_adj_mat - pred_rc_adj_mat)),
+                np.sum(np.abs(true_pc_adj_mat - pred_pc_adj_mat)),
+                np.sum(np.abs(true_rc_adj_mat - pred_pc_adj_mat)),
+                np.sum(np.abs(true_pc_adj_mat - pred_rc_adj_mat)),
+            )
+
+            # TODO: remove this hack soon
+            if (len(true_rc_smi_list) == len(pred_rc_smi_list) and len(true_pc_smi_list) == len(pred_pc_smi_list)) or \
+                (len(true_rc_smi_list) == len(pred_pc_smi_list) and len(true_pc_smi_list) == len(pred_rc_smi_list)):
+
+                if (np.sum(np.abs(true_rc_adj_mat - pred_rc_adj_mat)) == 0 and np.sum(np.abs(true_pc_adj_mat - pred_pc_adj_mat)) == 4) or \
+                    (np.sum(np.abs(true_rc_adj_mat - pred_rc_adj_mat)) == 4 and np.sum(np.abs(true_pc_adj_mat - pred_pc_adj_mat)) == 0) or \
+                    (np.sum(np.abs(true_rc_adj_mat - pred_pc_adj_mat)) == 0 and np.sum(np.abs(true_pc_adj_mat - pred_rc_adj_mat)) == 4) or \
+                    (np.sum(np.abs(true_rc_adj_mat - pred_pc_adj_mat)) == 4 and np.sum(np.abs(true_pc_adj_mat - pred_rc_adj_mat)) == 0) or \
+                    (np.sum(np.abs(true_rc_adj_mat - pred_rc_adj_mat)) == 0 and np.sum(np.abs(true_pc_adj_mat - pred_pc_adj_mat)) == 0) or \
+                   (np.sum(np.abs(true_rc_adj_mat - pred_pc_adj_mat)) == 0 and np.sum(np.abs(true_pc_adj_mat - pred_rc_adj_mat)) == 0):
+
+                # if (np.array_equal(true_rc_adj_mat, pred_rc_adj_mat) and np.array_equal(true_pc_adj_mat, pred_pc_adj_mat)) or \
+                #     (np.array_equal(true_rc_adj_mat, pred_pc_adj_mat) and np.array_equal(true_pc_adj_mat, pred_rc_adj_mat)):
+                    match = True
+                else:   
+                    match = False
+            else:
+                match = False
+
+        if match:
             complex = [self.rc_complex, self.pc_complex][1 - self.isomorphism_idx].copy()
 
             # save TS template

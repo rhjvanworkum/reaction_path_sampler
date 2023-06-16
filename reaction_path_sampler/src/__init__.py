@@ -34,29 +34,29 @@ class ReactionSampler:
         self._bond_rearr = None
         self._isomorphism_idx = None
 
-    @property
-    def rc_complex(self) -> Complex:
-        if self._rc_complex is None:
-            raise ValueError('Reactant complex not set, call generate_reaction_complexes() first')
-        return self._rc_complex
+    # @property
+    # def rc_complex(self) -> Complex:
+    #     if self._rc_complex is None:
+    #         raise ValueError('Reactant complex not set, call generate_reaction_complexes() first')
+    #     return self._rc_complex
 
-    @property
-    def pc_complex(self) -> Complex:
-        if self._pc_complex is None:
-            raise ValueError('Reactant complex not set, call generate_reaction_complexes() first')
-        return self._pc_complex
+    # @property
+    # def pc_complex(self) -> Complex:
+    #     if self._pc_complex is None:
+    #         raise ValueError('Reactant complex not set, call generate_reaction_complexes() first')
+    #     return self._pc_complex
 
-    @property
-    def charge(self) -> int:
-        if self._charge is None:
-            raise ValueError('Charge not set, call generate_reaction_complexes() first')
-        return self._charge
+    # @property
+    # def charge(self) -> int:
+    #     if self._charge is None:
+    #         raise ValueError('Charge not set, call generate_reaction_complexes() first')
+    #     return self._charge
 
-    @property
-    def mult(self) -> int:
-        if self._mult is None:
-            raise ValueError('Mult not set, call generate_reaction_complexes() first')
-        return self._mult
+    # @property
+    # def mult(self) -> int:
+    #     if self._mult is None:
+    #         raise ValueError('Mult not set, call generate_reaction_complexes() first')
+    #     return self._mult
 
     def generate_reaction_complexes(self) -> None:
         """

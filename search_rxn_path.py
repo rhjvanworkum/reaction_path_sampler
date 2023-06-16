@@ -3,6 +3,7 @@ import logging
 import yaml
 import os
 
+from reaction_path_sampler.src.molecular_system import MolecularSystem, Reaction
 from reaction_path_sampler.src.reaction_path_sampler import ReactionPathSampler
 
 # TODO: doesnt work
@@ -37,11 +38,15 @@ def search_rxn_path():
     with open(args.settings_file_path, "r") as f:
         settings = yaml.load(f, Loader=yaml.Loader)
 
-    reaction_path_sampler = ReactionPathSampler(settings)
-    reaction_path_sampler.generate_reaction_complexes()
-    reaction_path_sampler.map_reaction_complexes()
+    # creation Reaction object
+    reactants = MolecularSystem.from_smiles(".".join(settings['reactant_smiles']))
+    products = MolecularSystem.from_smiles(".".join(settings['product_smiles']))
+    reaction = Reaction(reactants, products, settings['solvent'])
+    reaction.map_reaction(n_workers=int(settings['n_processes'] * settings['xtb_n_cores']))
+
+    reaction_path_sampler = ReactionPathSampler(settings, reaction)
     rc_conformers, pc_conformers = reaction_path_sampler.sample_reaction_complex_conformers()
-    conformer_pairs = reaction_path_sampler.select_promising_reactant_product_pairs(rc_conformers, pc_conformers)
+    conformer_pairs = reaction_path_sampler.select_promising_reactant_product_pairs(rc_conformers, pc_conformers, products.charge)
 
     for idx, conformer_pair in enumerate(conformer_pairs):
         print(f'Working on Reactant-Product Complex pair {idx}')

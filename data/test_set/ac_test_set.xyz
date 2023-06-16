@@ -1,4 +1,6 @@
-CC(=O)On2nnc1ccncc12.NCC>>CC[NH2+]C(C)([O-])On2nnc1ccncc12
-CC[NH2+]C(C)([O-])On2nnc1ccncc12>>CC(=O)([NH2+]CC).n([O-])2nnc1ccncc12
+CC(=O)On2nnc1cccnc12.N>>[NH3+]C(C)([O-])On2nnc1cccnc12
+[NH3+]C(C)([O-])On2nnc1cccnc12>>CC(=O)([NH3+]).n([O-])2nnc1cccnc12
+CC(=O)On2nnc1cccnc12.NCC>>CC[NH2+]C(C)([O-])On2nnc1cccnc12
+CC[NH2+]C(C)([O-])On2nnc1cccnc12>>CC(=O)([NH2+]CC).n([O-])2nnc1cccnc12
 CC(=O)OC(=NC1CCCCC1)NC2CCCCC2.NCC>>CC([O-])([NH2+]CC)OC(=NC1CCCCC1)NC2CCCCC2
 CC([O-])([NH2+]CC)OC(=NC1CCCCC1)NC2CCCCC2>>CC(=O)([NH2+]CC).C(=NC1CCCCC1)([O-])NC2CCCCC2

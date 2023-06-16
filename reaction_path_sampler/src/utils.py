@@ -8,6 +8,43 @@ import os
 import re
 from openbabel import pybel
 import logging
+import networkx
+
+
+from reaction_path_sampler.src.graphs.xyz2mol import xyz2AC, __ATOM_LIST__
+from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
+
+def get_adj_mat_from_mol_block_string(mol_block_string: str) -> np.ndarray:
+    nodes1, nodes2 = [], []
+
+    mol_string_lines = mol_block_string.split('\n')
+    for line in mol_string_lines[5:]:
+        elements = line.split()
+        if len(elements) == 7:
+            node1, node2 = int(elements[0]), int(elements[1])
+            nodes1.append(node1)
+            nodes2.append(node2)
+
+    adj_mat = np.zeros((max(nodes1 + nodes2), max(nodes1 + nodes2)))
+
+    for node1, node2 in zip(nodes1, nodes2):
+        adj_mat[node1 - 1, node2 - 1] = 1
+
+    adj_mat = adj_mat + adj_mat.T
+
+    return adj_mat
+
+def comp_adj_mat(symbols, coords, charge):
+    symbols = [__ATOM_LIST__.index(s.lower()) + 1 for s in symbols]
+    adj_matrix, _ = xyz2AC(symbols, coords, charge, use_huckel=False)
+    return adj_matrix
+
+def visualize_graph(symbols, coords, charge):
+    adj_matrix = comp_adj_mat(symbols, coords, charge)
+    graph = networkx.from_numpy_array(adj_matrix)
+    networkx.set_node_attributes(graph, dict(enumerate(symbols)), "atom_label")
+    networkx.set_node_attributes(graph, dict(enumerate(coords)), "cartesian")
+    plot_networkx_mol_graph(graph)
 
 def get_tqdm_disable():
     if logging.getLogger().getEffectiveLevel() > logging.INFO:
@@ -115,10 +152,10 @@ def xyz_string_to_geom(xyz_string: str) -> Tuple[List[str], np.array]:
 def geom_to_xyz_string(atoms: List[str], geom: np.array) -> str:
     lines = []
     lines.append(f'{len(atoms)}')
-    lines.append('')
+    lines.append('comment')
     for a, coord in zip(atoms, geom):
-        lines.append(f'{a} {coord[0]} {coord[1]} {coord[2]}')
-    return "\n".join(lines)
+        lines.append(f"{a} {coord[0]:.4f} {coord[1]:.4f} {coord[2]:.4f}")
+    return "\n".join(lines) + "\n"
 
 """
 autodE utils

@@ -1,14 +1,14 @@
 """
-Script to compute a set of Amide Coupling reactions
+Script to compute a set of DA cycloadditions
 """
 
 import yaml
 import os
 
 if __name__ == "__main__":
-    output_folder = './scratch/ac_testje/'
+    output_folder = './scratch/fca_test_methanol_large/'
     base_settings_file = 'systems/rps.yaml'
-    file_path = 'data/test_set/ac_test_set.xyz'
+    file_path = 'data/fca/fca_dataset.txt'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -21,7 +21,7 @@ if __name__ == "__main__":
         for line in f.readlines():
             reaction_smiles_list.append(line.strip())
 
-    for idx, reaction_smiles in enumerate(reaction_smiles_list):
+    for idx, reaction_smiles in enumerate(reaction_smiles_list[300:]):
         output_dir = os.path.join(output_folder, f'{idx}')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -30,7 +30,8 @@ if __name__ == "__main__":
         reactants, products = reaction_smiles.split('>>')
         settings['reactant_smiles'] = reactants.split('.')
         settings['product_smiles'] = products.split('.')
-        settings['solvent'] = "DMF"
+        settings['solvent'] = "Methanol"
+        settings['use_cregen_pruning'] = False
         settings['n_processes'] = 8
 
         # yaml file

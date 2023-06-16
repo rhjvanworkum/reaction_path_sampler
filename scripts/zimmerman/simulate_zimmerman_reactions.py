@@ -4,10 +4,10 @@ from rdkit import Chem
 
 
 if __name__ == "__main__":
-    output_folder = './scratch/michael_addition_meoh_3/'
+    output_folder = './scratch/michael_addition_meoh_anion/'
     base_settings_file = 'systems/ac2.yaml'
     # file_path = 'data/zimmerman_reactions_am.txt'
-    file_path = 'data/test_set/ma_test_set.xyz'
+    file_path = 'data/test_set/ma_test_set_2.xyz'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)

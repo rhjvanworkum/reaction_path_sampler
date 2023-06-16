@@ -1,11 +1,28 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from openbabel import pybel
 import numpy as np
 
 from reaction_path_sampler.src.interfaces.XTB import xtb_driver
-from reaction_path_sampler.src.molecule import Molecule
+from reaction_path_sampler.src.molecular_system import MolecularSystem
 from reaction_path_sampler.src.constants import bohr_ang
-from reaction_path_sampler.src.utils import get_reactive_coordinate_value
+from reaction_path_sampler.src.utils import get_reactive_coordinate_value, get_adj_mat_from_mol_block_string
+
+def comp_ad_mat_xtb(
+    xyz_string: str,
+    charge: int,
+    mult: int,
+    solvent: str
+):
+    mol_block_string = xtb_driver(
+        xyz_string=xyz_string,
+        charge=charge,
+        mult=mult,
+        job="mol",
+        solvent=solvent
+    )
+    pred_adj_mat = get_adj_mat_from_mol_block_string(mol_block_string)
+    return pred_adj_mat
+
 
 
 def get_geometry_constraints(
@@ -59,7 +76,7 @@ def get_atom_constraints(
     return string
 
 def get_metadynamics_settings(
-    mol: Molecule,
+    mol: MolecularSystem,
     settings: Dict[str, Any],
     n_mols: int,
     post_fix: str = ""
@@ -79,16 +96,16 @@ def get_metadynamics_settings(
 
 
 def compute_wall_radius(
-    complex: Molecule, 
+    mol: MolecularSystem, 
     settings: Dict[str, Any],
 ) -> float:
     # Compute all interatomic distances
     distances = []
-    for i in range(complex.n_atoms):
+    for i in range(mol.n_atoms):
         for j in range(i):
             distances.append(
-                np.sqrt(np.sum((complex.geometry[i].coordinates - complex.geometry[j].coordinates)**2))
-            )
+                np.sqrt(np.sum((mol.init_geometry_autode.coordinates[i] - mol.init_geometry_autode.coordinates[j])**2))
+            ) 
 
     # Cavity is 1.5 x maximum distance in diameter
     radius_bohr = 0.5 * max(distances) * settings["cavity_scale"] + 0.5 * settings["cavity_offset"]
@@ -96,7 +113,7 @@ def compute_wall_radius(
     return radius_bohr
 
 def compute_force_constant(
-    complex: Molecule,
+    mol: MolecularSystem,
     settings: Dict[str, Any],
     reactive_coordinate: List[int],
     curr_coordinate_val: float,
@@ -114,9 +131,9 @@ def compute_force_constant(
         )
 
         structures, energies = xtb_driver(
-            complex.to_xyz_string(),
-            complex.charge,
-            complex.mult,
+            mol.init_geometry_xyz_string(),
+            mol.charge,
+            mol.mult,
             "scan",
             method='2',
             xcontrol_settings=xcontrol_settings,

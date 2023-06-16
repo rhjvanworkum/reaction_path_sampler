@@ -6,7 +6,7 @@ import numpy as np
 from reaction_path_sampler.src.conformational_sampling.metadyn_conformer_sampler import MetadynConformerSampler
 from reaction_path_sampler.src.interfaces.PYSISYPHUS import pysisyphus_driver
 from reaction_path_sampler.src.interfaces.methods import xtb_single_point_method
-from reaction_path_sampler.src.molecule import Molecule
+# from reaction_path_sampler.src.molecule import Molecule
 from reaction_path_sampler.src.utils import read_trajectory_file
 
 
@@ -27,10 +27,11 @@ def compute_barrier(
 
     if settings['sample_ts_conformers']:
         ts_conf_sampler = MetadynConformerSampler([], solvent, settings)
-        ts_confs = ts_conf_sampler.sample_ts_conformers(
-            complex=Molecule.from_xyz_string(ts_geometry, 0, 1),
-            fixed_atoms=[str(k + 1) for k in sorted(constraints.keys())]
-        )
+        # ts_confs = ts_conf_sampler.sample_ts_conformers(
+        #     complex=Molecule.from_xyz_string(ts_geometry, 0, 1),
+        #     fixed_atoms=[str(k + 1) for k in sorted(constraints.keys())]
+        # )
+        ts_confs = None
 
         # TS optimization loop thing
         max_tries = 5

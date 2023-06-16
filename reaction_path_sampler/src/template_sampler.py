@@ -23,7 +23,7 @@ from reaction_path_sampler.src.reaction_path.reaction_ends import check_reaction
 from reaction_path_sampler.src.ts_template import TStemplate
 from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, write_output_file
 from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
-from reaction_path_sampler.src.xyz2mol import get_canonical_smiles_from_xyz_string
+from reaction_path_sampler.src.graphs.xyz2mol import get_canonical_smiles_from_xyz_string
 
 
 class TemplateSampler(ReactionSampler):

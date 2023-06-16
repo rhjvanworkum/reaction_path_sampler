@@ -1,6 +1,7 @@
 
 from concurrent.futures import ProcessPoolExecutor
 import logging
+import tempfile
 from typing import Any, List
 import autode as ade
 import os
@@ -11,20 +12,20 @@ import time
 from reaction_path_sampler.src.conformational_sampling import ConformerSampler
 from reaction_path_sampler.src.interfaces.XTB import xtb_driver
 
-from reaction_path_sampler.src.interfaces.lewis import compute_adjacency_matrix, mol_write
+from reaction_path_sampler.src.graphs.lewis import compute_adjacency_matrix, mol_write, mol_write_geom
 from reaction_path_sampler.src.interfaces.xtb_utils import compute_wall_radius, get_wall_constraint
-from reaction_path_sampler.src.molecule import Molecule
-from reaction_path_sampler.src.utils import geom_to_xyz_string, get_tqdm_disable, xyz_string_to_geom
+from reaction_path_sampler.src.molecular_system import MolecularSystem
+from reaction_path_sampler.src.utils import geom_to_xyz_string, get_tqdm_disable, remove_whitespaces_from_xyz_strings, xyz_string_to_geom
 from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
 
-from reaction_path_sampler.src.xyz2mol import xyz2AC, __ATOM_LIST__
+from reaction_path_sampler.src.graphs.xyz2mol import xyz2AC, __ATOM_LIST__
 
 def optimize_conformer(args):
-    conformer, charge, mult, solvent, method, xcontrol_settings, cores = args
+    conformer, mol, solvent, method, xcontrol_settings, cores = args
     return xtb_driver(
         conformer,
-        charge,
-        mult,
+        mol.charge,
+        mol.mult,
         "opt",
         method=method,
         solvent=solvent,
@@ -33,63 +34,57 @@ def optimize_conformer(args):
     )
 
 def optimize_conformer_ff(args):
-    atomic_symbols, coordinates, adj_mat = args
+    atomic_symbols, coordinates, adj_mat, bond_mat = args
     new_coords = compute_ff_optimized_coords(
-        atomic_symbols, coordinates, adj_mat
+        atomic_symbols, coordinates, adj_mat, bond_mat
     )
     return geom_to_xyz_string(atomic_symbols, new_coords)
 
 def compute_ff_optimized_coords(
     atomic_symbols: List[str],
     coordinates: Any,
-    adj_mat: np.array,
+    adj_mat: np.ndarray,
+    bond_mat: np.ndarray,
     ff_name: str = 'UFF', 
     fixed_atoms: List[int] = [], 
     n_steps: int = 500
 ) -> None:
-    # create a mol file object for ob
-    mol_file_name = f'obff-{time.time()}.mol'
+    with tempfile.NamedTemporaryFile(suffix='.mol') as tmp:
+        # write mol file
+        mol_write_geom(
+            name=tmp.name,
+            elements=atomic_symbols,
+            geo=coordinates,
+            adj_mat=adj_mat,
+            bond_mat=bond_mat,
+            append_opt=False
+        )
 
-    mol_write(
-        name=mol_file_name,
-        elements=atomic_symbols,
-        geo=coordinates,
-        adj_mat=adj_mat,
-        q=0,
-        append_opt=False
-    )
+        # load in ob mol
+        conv = ob.OBConversion()
+        conv.SetInAndOutFormats('mol','xyz')
+        mol = ob.OBMol()
+        conv.ReadFile(mol, tmp.name)
 
-    # load in ob mol
-    conv = ob.OBConversion()
-    conv.SetInAndOutFormats('mol','xyz')
-    mol = ob.OBMol()    
-    conv.ReadFile(mol, mol_file_name)
-
-    # Define constraints  
-    constraints= ob.OBFFConstraints()
-    if len(fixed_atoms) > 0:
-        for atom in fixed_atoms: 
-            constraints.AddAtomConstraint(int(atom)) 
-            
-    # Setup the force field with the constraints 
-    forcefield = ob.OBForceField.FindForceField(ff_name)
-    forcefield.Setup(mol, constraints)     
-    forcefield.SetConstraints(constraints) 
+        # Define constraints  
+        constraints= ob.OBFFConstraints()
+        if len(fixed_atoms) > 0:
+            for atom in fixed_atoms: 
+                constraints.AddAtomConstraint(int(atom)) 
+                
+        # Setup the force field with the constraints 
+        forcefield = ob.OBForceField.FindForceField(ff_name)
+        forcefield.Setup(mol, constraints)     
+        forcefield.SetConstraints(constraints) 
     
-    # Do a conjugate gradient minimiazation
-    forcefield.ConjugateGradients(n_steps)
-    forcefield.GetCoordinates(mol) 
+        # Do a conjugate gradient minimiazation
+        forcefield.ConjugateGradients(n_steps)
+        forcefield.GetCoordinates(mol) 
 
-    # cleanup
-    try:
-        os.remove(mol_file_name)
-    except:
-        pass
-
-    # read coordinates
-    coordinates = []
-    for atom in ob.OBMolAtomIter(mol):
-        coordinates.append([atom.GetX(), atom.GetY(), atom.GetZ()])
+        # read coordinates
+        coordinates = []
+        for atom in ob.OBMolAtomIter(mol):
+            coordinates.append([atom.GetX(), atom.GetY(), atom.GetZ()])
 
     return np.array(coordinates)
 
@@ -100,7 +95,7 @@ class TopologyConformerSampler(ConformerSampler):
         smiles_strings: List[str],
         settings: Any,
         solvent: str,
-        mol: ade.Species,
+        mol: MolecularSystem
     ) -> None:
         super().__init__(
             smiles_strings=smiles_strings,
@@ -108,20 +103,9 @@ class TopologyConformerSampler(ConformerSampler):
             solvent=solvent
         )
         self.mol = mol
-        # self.adjacency_matrix = compute_adjacency_matrix(
-        #     elements=[a.atomic_symbol for a in self.mol.atoms],
-        #     geometry=self.mol.coordinates
-        # )
-        # plot_networkx_mol_graph(self.mol.graph, self.mol.coordinates)
-        symbols, coords = self.mol.atomic_symbols, self.mol.coordinates
-        symbols = [
-            __ATOM_LIST__.index(s.lower()) + 1 for s in symbols
-        ]
-        self.adjacency_matrix, _ = xyz2AC(symbols, coords, self.mol.charge, use_huckel=True)
-        self.adjacency_matrix = self.adjacency_matrix.astype(np.float32)
 
         self.settings["wall_radius"] = compute_wall_radius(
-            complex=Molecule.from_autode_mol(self.mol),
+            mol=self.mol,
             settings=self.settings
         )
 
@@ -133,6 +117,9 @@ class TopologyConformerSampler(ConformerSampler):
         )
         print(f'optimizing conformers with FF: {time.time() - t}')
 
+        with open('ff_optimized_confs.', 'w') as f:
+            f.writelines(confs)
+
         # 2. Optimize conformers
         t = time.time()
         confs = self._optimize_conformers(
@@ -140,10 +127,13 @@ class TopologyConformerSampler(ConformerSampler):
         )
         print(f'optimizing conformers: {time.time() - t}')
 
+        with open('xtb_optimized_confs.', 'w') as f:
+            f.writelines(confs)
+
         # 3. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
-            initial_geometry=self.mol,
+            mol=self.mol,
             conformers=confs,
             use_graph_pruning=True,
             use_cregen_pruning=False
@@ -160,7 +150,7 @@ class TopologyConformerSampler(ConformerSampler):
         arguments = []
         for conformer in conformers:
             atomic_symbols, coordinates = xyz_string_to_geom(conformer)
-            arguments.append((atomic_symbols, coordinates, self.adjacency_matrix))
+            arguments.append((atomic_symbols, coordinates, self.mol.connectivity_matrix, self.mol.bond_order_matrix))
  
         with ProcessPoolExecutor(max_workers=self.settings['n_processes']) as executor:
             pre_opt_conformers = list(tqdm(executor.map(optimize_conformer_ff, arguments), total=len(arguments), desc="Optimizing conformers FF", disable=get_tqdm_disable()))
@@ -180,7 +170,7 @@ class TopologyConformerSampler(ConformerSampler):
         )
         
         arguments = [
-            (conf, self.mol.charge, self.mol.mult, self.solvent, self.settings['xtb_method'], xcontrol_settings, self.settings['xtb_n_cores']) for conf in conformers
+            (conf, self.mol, self.solvent, self.settings['xtb_method'], xcontrol_settings, self.settings['xtb_n_cores']) for conf in conformers
         ]
         with ProcessPoolExecutor(max_workers=self.settings['n_processes']) as executor:
             opt_conformers = list(tqdm(executor.map(optimize_conformer, arguments), total=len(arguments), desc="Optimizing conformers", disable=get_tqdm_disable()))
