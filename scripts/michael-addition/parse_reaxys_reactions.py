@@ -4,7 +4,7 @@ import pandas as pd
 
 
 PRODUCT_RXN = AllChem.ReactionFromSmarts(
-    "[S,s:5][#6:1][#6:2][#6:3]=[O:4]>>[SH+,sH+:5][#6:1][#6:2]=[#6:3]-[O-:4]"
+    "[S,s:5][#6:1][#6:2][#6:3]=[O:4]>>[S,s:5][#6:1][#6:2]=[#6:3]-[O-:4]"
 )
 
 def simulate_reaction(substrates, reaction_smarts, fix_oxygen: bool = False):
@@ -24,11 +24,21 @@ def simulate_reaction(substrates, reaction_smarts, fix_oxygen: bool = False):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv('./data/michael_addition/ma_dataset_thio.csv')
+    df = pd.read_csv('./data/michael_addition/ma_dataset_thio_small_methanol.csv')
 
     reaction_smiles_list = []
     for substrates, products in zip(df['substrates'].values, df['products'].values):
-        reactants_list = substrates.split('.')
+        substrates = substrates.split('.')
+        if 'S' in substrates[0]:
+            reactants_list = [
+                substrates[0].replace('S', '[S-]'),
+                substrates[1]
+            ]
+        elif 'S' in substrates[1]:
+            reactants_list = [
+                substrates[1].replace('S', '[S-]'),
+                substrates[0]
+            ]
 
         product = [Chem.MolFromSmiles(products)]
         intermediate = simulate_reaction(product, PRODUCT_RXN, fix_oxygen=True)[0]
@@ -37,5 +47,5 @@ if __name__ == "__main__":
         reaction_smiles = f"{'.'.join(reactants_list)}>>{'.'.join(products_list)}"
         reaction_smiles_list.append(reaction_smiles)
     
-    with open('./data/michael_addition/ma_dataset_thio.txt', 'w') as f:
+    with open('./data/michael_addition/ma_dataset_thio_small_methanol.txt', 'w') as f:
         f.writelines("\n".join(reaction_smiles_list))

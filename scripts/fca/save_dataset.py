@@ -4,8 +4,8 @@ import pandas as pd
 
 
 if __name__ == "__main__":
-    output_folder = './scratch/fca_test_methanol/'
-    name = "fca_test_methanol"
+    output_folder = './scratch/fca_test_methanol_large/'
+    name = "fca_test_methanol_large"
     base_settings_file = 'systems/rps.yaml'
     file_path = 'data/fca/fca_dataset.txt'
 
@@ -48,4 +48,4 @@ if __name__ == "__main__":
         'simulation_idx': np.zeros(len(substrates))
     })
 
-    df.to_csv('./data/fca/fca_test_result.csv')
+    df.to_csv('./data/fca/fca_test_result_large_temp.csv')

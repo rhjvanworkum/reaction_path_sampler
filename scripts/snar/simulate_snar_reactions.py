@@ -6,9 +6,9 @@ import yaml
 import os
 
 if __name__ == "__main__":
-    output_folder = './scratch/ma_thio_small_meoh_test_4/'
+    output_folder = './scratch/snar_test/'
     base_settings_file = 'systems/rps.yaml'
-    file_path = 'data/michael_addition/ma_dataset_thio_small_methanol.txt'
+    file_path = 'data/snar/snar_test.xyz'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -32,7 +32,6 @@ if __name__ == "__main__":
         settings['product_smiles'] = products.split('.')
         settings['solvent'] = "Methanol"
         settings['use_cregen_pruning'] = False
-        settings['barrier_method'] = "orca_B3LYP"
         settings['n_processes'] = 8
 
         # yaml file
@@ -50,5 +49,5 @@ if __name__ == "__main__":
             ])
 
         # execute
-        os.system(f'sbatch --cpus-per-task=16 --time=10:00:00 --qos=cpus150 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
+        os.system(f'sbatch --cpus-per-task=16 --time=1:00:00 --qos=cpus50 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
 

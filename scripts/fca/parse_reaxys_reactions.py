@@ -26,10 +26,14 @@ def create_intermediate(species):
     return mol
 
 if __name__ == "__main__":
-    df = pd.read_csv('./data/fca/fca_dataset.csv')
+    df = pd.read_csv('./data/fca/fca_dataset_small.csv')
 
     reaction_smiles_list = []
-    for substrates, products in zip(df['substrates'].values, df['products'].values):
+    for substrates, products, solvent in zip(
+        df['substrates'].values, 
+        df['products'].values,
+        df['solvent'].values
+    ):
         substrate1, substrate2 = substrates.split('.')
         substrate1, substrate2 = Chem.MolFromSmiles(substrate1), Chem.MolFromSmiles(substrate2)
         if len(substrate1.GetSubstructMatches(acyl_smiles_pattern)) >= 1:
@@ -38,13 +42,13 @@ if __name__ == "__main__":
             substrate2 = create_oxonium_species(substrate2)
         reactants_list = [Chem.MolToSmiles(substrate1), Chem.MolToSmiles(substrate2)]
 
-        try:
-            products_list = [Chem.MolToSmiles(create_intermediate(Chem.MolFromSmiles(products)))]
-        except:
-            products_list = ['CC']
+        # try:
+        products_list = [Chem.MolToSmiles(create_intermediate(Chem.MolFromSmiles(products)))]
+        # except:
+        #     products_list = ['CC']
        
-        reaction_smiles = f"{'.'.join(reactants_list)}>>{'.'.join(products_list)}"
+        reaction_smiles = f"{'.'.join(reactants_list)}>>{'.'.join(products_list)} {solvent}"
         reaction_smiles_list.append(reaction_smiles)
     
-    with open('./data/fca/fca_dataset.txt', 'w') as f:
+    with open('./data/fca/fca_dataset_small.txt', 'w') as f:
         f.writelines("\n".join(reaction_smiles_list))
