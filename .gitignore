@@ -8,6 +8,7 @@ __pycache__/
 nul
 run.out
 *.out
+.xyz
 
 # C extensions
 *.so

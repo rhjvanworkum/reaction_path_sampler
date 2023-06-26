@@ -57,8 +57,7 @@ class MetadynConformerSampler(ConformerSampler):
         self,
         smiles_strings: int,
         solvent: str,
-        settings: Dict[str, Any],
-        mol: MolecularSystem
+        settings: Dict[str, Any]
     ) -> None:
         super().__init__(
             smiles_strings=smiles_strings,
@@ -66,73 +65,71 @@ class MetadynConformerSampler(ConformerSampler):
             solvent=solvent
         )
 
-        self.mol = mol
-
-    # def sample_ts_conformers(
-    #     self,
-    #     complex: Molecule,
-    #     fixed_atoms: Optional[List[int]] = None, 
-    # ) -> List[str]:     
-    #     self.settings["wall_radius"] = compute_wall_radius(
-    #         complex=complex,
-    #         settings=self.settings
-    #     )
-
-    #     # 1. sample conformers
-    #     t = time.time()
-    #     confs = self._sample_metadynamics_conformers(complex=complex, post_fix="_ts", fixed_atoms=fixed_atoms)
-    #     print(f'metadyn sampling: {time.time() - t}')
-    #     print(f'metadyn sampled n conformers: {len(confs)}')
-
-    #     # 2. optimize conformers
-    #     t = time.time()
-    #     confs = self._optimize_conformers(
-    #         complex=complex,
-    #         conformers=confs,
-    #         fixed_atoms=fixed_atoms
-    #     )
-    #     print(f'optimizing conformers: {time.time() - t}')
-
-    #     # 3. prune conformer set
-    #     t = time.time()
-    #     confs = self._prune_conformers(
-    #         initial_geometry=complex,
-    #         mol=self.mol,
-    #         conformers=confs,
-    #         use_graph_pruning=False,
-    #         use_cregen_pruning=True,
-    #         init="ts_"
-    #     )
-    #     print(f'pruning conformers: {time.time() - t}')
-    #     print(f'conformers after pruning: {len(confs)}\n\n')
-
-    #     return confs
-
-    # TODO: pass mol instead of using class attribute
-    def sample_conformers(
-        self, 
+    def sample_ts_conformers(
+        self,
+        mol: MolecularSystem,
         fixed_atoms: Optional[List[int]] = None, 
-    ) -> List[str]:    
+    ) -> List[str]:     
         self.settings["wall_radius"] = compute_wall_radius(
-            mol=self.mol,
+            mol=mol,
             settings=self.settings
         )
 
         # 1. sample conformers
         t = time.time()
-        confs = self._sample_metadynamics_conformers(mol=self.mol, fixed_atoms=fixed_atoms)
+        confs = self._sample_metadynamics_conformers(mol=mol, post_fix="", fixed_atoms=fixed_atoms)
+        print(f'metadyn sampling: {time.time() - t}')
+        print(f'metadyn sampled n conformers: {len(confs)}')
+
+        # 2. optimize conformers
+        t = time.time()
+        confs = self._optimize_conformers(
+            mol=mol,
+            conformers=confs,
+            fixed_atoms=fixed_atoms
+        )
+        print(f'optimizing conformers: {time.time() - t}')
+
+        # 3. prune conformer set
+        t = time.time()
+        confs = self._prune_conformers(
+            mol=mol,
+            conformers=confs,
+            use_graph_pruning=False,
+            use_cregen_pruning=True,
+            init="ts_"
+        )
+        print(f'pruning conformers: {time.time() - t}')
+        print(f'conformers after pruning: {len(confs)}\n\n')
+
+        return confs
+
+    # TODO: pass mol instead of using class attribute
+    def sample_conformers(
+        self, 
+        mol: MolecularSystem,
+        fixed_atoms: Optional[List[int]] = None, 
+    ) -> List[str]:    
+        self.settings["wall_radius"] = compute_wall_radius(
+            mol=mol,
+            settings=self.settings
+        )
+
+        # 1. sample conformers
+        t = time.time()
+        confs = self._sample_metadynamics_conformers(mol=mol, fixed_atoms=fixed_atoms)
         print(f'metadyn sampling: {time.time() - t}')
         print(f'metadyn sampled n conformers: {len(confs)}')
 
         if len(confs) < 10:
-            confs = self._sample_metadynamics_conformers(mol=self.mol, post_fix="_tight", fixed_atoms=fixed_atoms)
+            confs = self._sample_metadynamics_conformers(mol=mol, post_fix="_tight", fixed_atoms=fixed_atoms)
             print(f'metadyn sampling: {time.time() - t}')
             print(f'metadyn sampled n conformers: {len(confs)}')
 
         # 2. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
-            mol=self.mol,
+            mol=mol,
             conformers=confs,
             use_graph_pruning=False,
             use_cregen_pruning=True,
@@ -145,7 +142,7 @@ class MetadynConformerSampler(ConformerSampler):
         # 3. optimize conformers
         t = time.time()
         confs = self._optimize_conformers(
-            mol=self.mol,
+            mol=mol,
             conformers=confs,
         )
         print(f'optimizing conformers: {time.time() - t}')
@@ -156,7 +153,7 @@ class MetadynConformerSampler(ConformerSampler):
         # 4. prune conformer set
         t = time.time()
         confs = self._prune_conformers(
-            mol=self.mol,
+            mol=mol,
             conformers=confs,
             use_graph_pruning=True,
             use_cregen_pruning=self.settings['use_cregen_pruning']

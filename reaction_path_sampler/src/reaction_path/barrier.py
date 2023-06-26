@@ -6,7 +6,7 @@ import numpy as np
 from reaction_path_sampler.src.conformational_sampling.metadyn_conformer_sampler import MetadynConformerSampler
 from reaction_path_sampler.src.interfaces.PYSISYPHUS import pysisyphus_driver
 from reaction_path_sampler.src.interfaces.methods import xtb_single_point_method
-# from reaction_path_sampler.src.molecule import Molecule
+from reaction_path_sampler.src.molecular_system import MolecularSystem
 from reaction_path_sampler.src.utils import read_trajectory_file
 
 
@@ -23,20 +23,39 @@ def compute_barrier(
     """ Compute energy of lowest reactant energy conformer """
     r_confs, _ = read_trajectory_file(reactant_conformers_file_path)
     energies = [method(reactant, charge, mult, solvent, n_cores=2) for reactant in r_confs]
-    r_energy = min(energies)
+    energies = [e for e in energies if e is not None]
+    if len(energies) > 0:
+        r_energy = min(energies)
+    else:
+        print('Warning: All DFT calcs failed for reactant conformers. Using XTB instead.')
+        energies = [xtb_single_point_method(reactant, charge, mult, solvent, n_cores=2) for reactant in r_confs]
+        energies = [e for e in energies if e is not None]
+        r_energy = min(energies)
 
     if settings['sample_ts_conformers']:
-        ts_conf_sampler = MetadynConformerSampler([], solvent, settings)
-        # ts_confs = ts_conf_sampler.sample_ts_conformers(
-        #     complex=Molecule.from_xyz_string(ts_geometry, 0, 1),
-        #     fixed_atoms=[str(k + 1) for k in sorted(constraints.keys())]
-        # )
-        ts_confs = None
+        ts_conf_sampler = MetadynConformerSampler(
+            smiles_strings=[], 
+            solvent=solvent, 
+            settings=settings
+        )
+        ts_confs = ts_conf_sampler.sample_ts_conformers(
+            mol=MolecularSystem(
+                smiles=None,
+                rdkit_mol=None,
+                geometry="".join(ts_geometry),
+                charge=charge,
+                mult=mult
+            ),
+            fixed_atoms=[str(k + 1) for k in sorted(constraints.keys())]
+        )
 
-        # TS optimization loop thing
+        # TS optimization loop 
+        # here ts conformers already come in ranked by energy from the sampler
+        # therefore we are just trying top 5 to optimize & find lowest conformer
         max_tries = 5
         ts = None
-        for i in range(max_tries):
+        for i in range(min(len(ts_confs), max_tries)):
+        # try:
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.xyz')
             try:
                 with open(tmp.name, 'w') as f:
@@ -59,10 +78,12 @@ def compute_barrier(
                 tmp.close()
                 os.unlink(tmp.name)
 
+
     if not settings['sample_ts_conformers'] or (settings['sample_ts_conformers'] and ts is None):
         ts = "".join(ts_geometry)
 
     ts_energy = method(ts, charge, mult, solvent, n_cores=2)
+    print(ts_energy, ' from orca')
 
     if ts_energy is None or r_energy is None:
         return np.nan   

@@ -4,8 +4,8 @@ import networkx as nx
 import plotly.graph_objects as go
 import pandas as pd
 
-COLOR_DF = pd.read_csv('./data/jmol_colors.csv')
-# COLOR_DF = None
+# COLOR_DF = pd.read_csv('./data/jmol_colors.csv')
+COLOR_DF = None
 
 def get_color_of_atom(atom_symbol: str):
     color = np.array([

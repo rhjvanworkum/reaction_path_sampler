@@ -1,14 +1,16 @@
-from typing import Dict, List, Tuple
+import time
+from typing import Dict, List, Optional, Tuple
 from rdkit import Chem
 import numpy as np
 import autode as ade
+from autode.conformers.conformer import Conformer
 import networkx as nx
 from autode.species import Complex
 from reaction_path_sampler.src.graphs.lewis import find_lewis
 from reaction_path_sampler.src.reaction_path.complexes import generate_reaction_complex
 from reaction_path_sampler.src.reaction_path.reaction_graph import get_reaction_graph_isomorphism
 
-from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, remap_conformer
+from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, remap_conformer, xyz_string_to_autode_atoms
 from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
 
 class Reaction:
@@ -41,6 +43,11 @@ class Reaction:
         self._isomorphism = isomorphism
         self._isomorphism_idx = isomorphism_idx
 
+class FakeComplex:
+
+    def __init__(self, geometry_string) -> None:
+        pass
+
 
 class MolecularSystem:
 
@@ -55,6 +62,9 @@ class MolecularSystem:
         self,
         smiles: str,
         rdkit_mol: Chem.Mol,
+        mult: Optional[int] = None,
+        charge: Optional[int] = None,
+        geometry: Optional[str] = None
     ) -> None:
         self.__smiles = smiles
         self.__rdkit_mol = rdkit_mol
@@ -64,9 +74,30 @@ class MolecularSystem:
         self.__bond_order_matrix = None
         self.__bond_electron_matrix = None
 
-        self.autode_complex = generate_reaction_complex(smiles.split('.'))
+        if geometry is not None:
+            self.autode_complex = ade.Species(
+                name=str(time.time()),
+                atoms=xyz_string_to_autode_atoms(geometry),
+                charge=charge,
+                mult=mult
+            )
+            self.autode_complex.conformers = [
+                Conformer(
+                    name=str(time.time()),
+                    atoms=xyz_string_to_autode_atoms(geometry),
+                    charge=charge,
+                    mult=mult
+                )
+            ]
+        else:
+            self.autode_complex = generate_reaction_complex(smiles.split('.'))
+        
         self.charge = self.autode_complex.charge
         self.mult = self.autode_complex.mult
+        if mult is not None:
+            self.mult = mult
+        if charge is not None:
+            self.charge = charge
 
         self.connectivity_matrix = nx.to_numpy_array(self.autode_complex.graph)
         self.atoms_list = np.array([atom.atomic_symbol for atom in self.autode_complex.atoms])
@@ -162,12 +193,16 @@ class MolecularSystem:
         self.build_graph()
 
     @classmethod
-    def from_smiles(cls, smiles: str) -> 'MolecularSystem':
+    def from_smiles(
+        cls, 
+        smiles: str,
+        mult: Optional[int] = None,
+    ) -> 'MolecularSystem':
         rdkit_mol = Chem.MolFromSmiles(smiles)
         rdkit_mol = Chem.AddHs(rdkit_mol)
         if rdkit_mol is None:
             raise ValueError("Could not parse SMILES string")
-        return cls(smiles, rdkit_mol)
+        return cls(smiles, rdkit_mol, mult)
 
     @classmethod
     def from_rdkit_mol(cls, rdkit_mol: str) -> 'MolecularSystem':

@@ -8,6 +8,8 @@ output_dir: './scratch/fca'
 reactant_smiles: ["[O+]#CCCc1ccccc1"]
 product_smiles: ["O=C1CCC2=CC=C[CH+]C12"]
 solvent: "Methanol"
+mult: 1
+charge: 0
 
 # task
 use_rxn_mapper: False

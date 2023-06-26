@@ -23,9 +23,8 @@ def sample_reactant_and_product_conformers(
                 smiles_strings=settings["product_smiles"], 
                 settings=settings,
                 solvent=settings["solvent"],
-                mol=products
             )
-            pc_conformers = pc_conf_sampler.sample_conformers()
+            pc_conformers = pc_conf_sampler.sample_conformers(mol=products)
         elif settings["sampling_method"] == "autode":
             raise NotImplementedError
         elif settings["sampling_method"] == "metadynamics+topology":
@@ -33,9 +32,8 @@ def sample_reactant_and_product_conformers(
                 smiles_strings=settings["product_smiles"], 
                 settings=settings,
                 solvent=settings["solvent"],
-                mol=products
             )
-            pc_conformers = pc_conf_sampler.sample_conformers()
+            pc_conformers = pc_conf_sampler.sample_conformers(mol=products)
         elif settings["sampling_method"] == "autode+topology":
             raise NotImplementedError
         
@@ -52,9 +50,8 @@ def sample_reactant_and_product_conformers(
                 smiles_strings=settings["reactant_smiles"], 
                 settings=settings,
                 solvent=settings["solvent"],
-                mol=reactants
             )
-            rc_conformers = rc_conf_sampler.sample_conformers()
+            rc_conformers = rc_conf_sampler.sample_conformers(mol=reactants)
         elif settings["sampling_method"] == "autode":
             raise NotImplementedError
         elif settings["sampling_method"] == "metadynamics+topology":
