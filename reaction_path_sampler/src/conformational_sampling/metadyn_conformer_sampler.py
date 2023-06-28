@@ -115,6 +115,12 @@ class MetadynConformerSampler(ConformerSampler):
             settings=self.settings
         )
 
+        print(
+            len(mol.atoms_list), 
+            mol.connectivity_matrix.shape,
+            mol.init_geometry_autode.coordinates.shape
+        )
+
         # 1. sample conformers
         t = time.time()
         confs = self._sample_metadynamics_conformers(mol=mol, fixed_atoms=fixed_atoms)
@@ -125,6 +131,9 @@ class MetadynConformerSampler(ConformerSampler):
             confs = self._sample_metadynamics_conformers(mol=mol, post_fix="_tight", fixed_atoms=fixed_atoms)
             print(f'metadyn sampling: {time.time() - t}')
             print(f'metadyn sampled n conformers: {len(confs)}')
+
+        with open('pre_filter_confs.xyz', 'w') as f:
+            f.writelines(confs)
 
         # 2. prune conformer set
         t = time.time()
@@ -147,7 +156,7 @@ class MetadynConformerSampler(ConformerSampler):
         )
         print(f'optimizing conformers: {time.time() - t}')
 
-        with open('pre_filter_confs.xyz', 'w') as f:
+        with open('opt_confs.xyz', 'w') as f:
             f.writelines(confs)
 
         # 4. prune conformer set

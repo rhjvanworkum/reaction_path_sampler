@@ -1,5 +1,5 @@
-Brc1cc(Br)c2ccccc2n1.CNC.[OH-]>>CN(C)c1cc(Br)c2ccccc2n1.O.[Br-]
-Brc1cc(Br)c2ccccc2n1.CNC.[OH-]>>CN(C)c1cc(Br)nc2ccccc12.O.[Br-]
+Brc1cc(Br)c2ccccc2n1.CNC>>C[NH+](C)c1cc(Br)c2ccccc2n1.[Br-]
+Brc1cc(Br)c2ccccc2n1.CNC>>C[NH+](C)c1cc(Br)nc2ccccc12.[Br-]
 Brc1cc(Br)c2ncc(I)n2n1.C[S-]>>CSc1cc(Br)c2ncc(I)n2n1.[Br-]
 Brc1cc(Br)c2ncc(I)n2n1.C[S-]>>CSc1cc(Br)nn2c(I)cnc12.[Br-]
-Brc1cc(Br)c2ncc(I)n2n1.C[S-]>>CSc1cnc2c(Br)cc(Br)nn12.[Br-]
+Brc1cc(Br)c2ncc(I)n2n1.C[S-]>>CSc1cnc2c(Br)cc(Br)nn12.[I-]

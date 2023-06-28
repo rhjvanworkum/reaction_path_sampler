@@ -16,16 +16,21 @@ from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_gra
 
 def get_adj_mat_from_mol_block_string(mol_block_string: str) -> np.ndarray:
     nodes1, nodes2 = [], []
+    n_atoms= 0
 
     mol_string_lines = mol_block_string.split('\n')
-    for line in mol_string_lines[5:]:
+    for idx, line in enumerate(mol_string_lines[4:]):
         elements = line.split()
+
+        if len(elements) == 16:
+            n_atoms += 1
+
         if len(elements) == 7:
             node1, node2 = int(elements[0]), int(elements[1])
             nodes1.append(node1)
             nodes2.append(node2)
 
-    adj_mat = np.zeros((max(nodes1 + nodes2), max(nodes1 + nodes2)))
+    adj_mat = np.zeros((n_atoms, n_atoms))
 
     for node1, node2 in zip(nodes1, nodes2):
         adj_mat[node1 - 1, node2 - 1] = 1

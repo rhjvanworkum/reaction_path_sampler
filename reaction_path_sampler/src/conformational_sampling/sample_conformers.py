@@ -25,8 +25,6 @@ def sample_reactant_and_product_conformers(
                 solvent=settings["solvent"],
             )
             pc_conformers = pc_conf_sampler.sample_conformers(mol=products)
-        elif settings["sampling_method"] == "autode":
-            raise NotImplementedError
         elif settings["sampling_method"] == "metadynamics+topology":
             pc_conf_sampler =  MetadynConformerSampler(
                 smiles_strings=settings["product_smiles"], 
@@ -34,8 +32,6 @@ def sample_reactant_and_product_conformers(
                 solvent=settings["solvent"],
             )
             pc_conformers = pc_conf_sampler.sample_conformers(mol=products)
-        elif settings["sampling_method"] == "autode+topology":
-            raise NotImplementedError
         
         with open(pc_conformers_save_path, 'w') as f:
             f.writelines(remove_whitespaces_from_xyz_strings(pc_conformers))
@@ -52,8 +48,6 @@ def sample_reactant_and_product_conformers(
                 solvent=settings["solvent"],
             )
             rc_conformers = rc_conf_sampler.sample_conformers(mol=reactants)
-        elif settings["sampling_method"] == "autode":
-            raise NotImplementedError
         elif settings["sampling_method"] == "metadynamics+topology":
             rc_conf_sampler = TopologyConformerSampler(
                 smiles_strings=settings["reactant_smiles"], 
@@ -62,8 +56,6 @@ def sample_reactant_and_product_conformers(
                 mol=reactants
             )
             rc_conformers = rc_conf_sampler.sample_conformers(pc_conformers)
-        elif settings["sampling_method"] == "autode+topology":
-            raise NotImplementedError
 
         with open(rc_conformers_save_path, 'w') as f:
             f.writelines(remove_whitespaces_from_xyz_strings(rc_conformers))

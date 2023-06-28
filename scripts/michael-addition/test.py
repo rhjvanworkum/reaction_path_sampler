@@ -25,6 +25,8 @@ if __name__ == "__main__":
             except:
                 continue
 
+    print(len([b for b in barriers if b is not None]))
+
     df = pd.read_csv('./data/michael_addition/ma_dataset_thio_small_methanol.csv')
     df['barrier'] = None
     for barrier, index in zip(barriers, indices):
@@ -38,7 +40,6 @@ if __name__ == "__main__":
     df['uid'] = np.arange(len(df))
     new_df = df[df['reaction_idx'].isin(keep_r_idxs)]
     # new_df = new_df[~new_df['uid'].isin(ex_id)]
-    print(new_df['uid'])
     
     print(len(new_df), len(new_df['reaction_idx'].unique()))
 

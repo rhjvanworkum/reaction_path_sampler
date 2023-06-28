@@ -64,7 +64,7 @@
 
 """ Cancel SLURM jobs """
 import os
-for i in range(52373, 53000):
+for i in range(52373, 54000):
     if i not in [52173, 52174, 52175]:
         os.system(f'scancel {i}')
 
@@ -84,22 +84,22 @@ for i in range(52373, 53000):
 #                             os.remove(os.path.join(root, file))
 
 """ Test how many reaction paths worked """
-# import os
-# i = 0
-# list = []
-# for root, dirs, files in os.walk('./scratch/fca_test_small_mult_ts/'):
-#     if len(root.split('/')) > 3 and root.split('/')[-2] == 'fca_test_small_mult_ts':
-#         if os.path.exists(os.path.join(root, 'reaction.xyz')):
+import os
+i = 0
+list = []
+for root, dirs, files in os.walk('./scratch/snar_simulated_1/'):
+    if len(root.split('/')) > 3 and root.split('/')[-2] == 'snar_simulated_1':
+        if os.path.exists(os.path.join(root, 'reaction.xyz')):
             
-#             # for _, dirs, _ in os.walk(root):
-#             #     if len(dirs) > 0:
-#             #         list.append(len(dirs))
+            # for _, dirs, _ in os.walk(root):
+            #     if len(dirs) > 0:
+            #         list.append(len(dirs))
 
-#             list.append(int(root.split('/')[-1]))
-#             i += 1
+            list.append(int(root.split('/')[-1]))
+            i += 1
 
-# print(i)
-# print(sorted(list))
+print(i)
+print(sorted(list))
 
 # import numpy as np
 # l = [j if j not in list else None for j in np.arange(300)]
