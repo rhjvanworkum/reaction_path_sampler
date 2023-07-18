@@ -63,10 +63,9 @@
 
 
 """ Cancel SLURM jobs """
-import os
-for i in range(52373, 54000):
-    if i not in [52173, 52174, 52175]:
-        os.system(f'scancel {i}')
+# import os
+# for i in range(56208, 57000):
+#     os.system(f'scancel {i}')
 
 """ Keep only rc's & pc's from previous job """
 # import os
@@ -87,9 +86,9 @@ for i in range(52373, 54000):
 import os
 i = 0
 list = []
-for root, dirs, files in os.walk('./scratch/snar_simulated_1/'):
-    if len(root.split('/')) > 3 and root.split('/')[-2] == 'snar_simulated_1':
-        if os.path.exists(os.path.join(root, 'reaction.xyz')):
+for root, dirs, files in os.walk('./scratch/ac_hatu_test/'):
+    if len(root.split('/')) > 3 and root.split('/')[-2] == 'ac_hatu_test':
+        if os.path.exists(os.path.join(root, 'barrier.txt')):
             
             # for _, dirs, _ in os.walk(root):
             #     if len(dirs) > 0:
@@ -99,7 +98,14 @@ for root, dirs, files in os.walk('./scratch/snar_simulated_1/'):
             i += 1
 
 print(i)
-print(sorted(list))
+
+new_list = []
+for idx in range(100):
+    if idx in list:
+        new_list.append(idx)
+print(new_list)
+
+# print(sorted(list))
 
 # import numpy as np
 # l = [j if j not in list else None for j in np.arange(300)]

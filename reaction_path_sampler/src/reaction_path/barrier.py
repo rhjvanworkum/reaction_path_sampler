@@ -83,7 +83,7 @@ def compute_barrier(
         ts = "".join(ts_geometry)
 
     ts_energy = method(ts, charge, mult, solvent, n_cores=2)
-    print(ts_energy, ' from orca')
+    print('computed TS energy: ', ts_energy)
 
     if ts_energy is None or r_energy is None:
         return np.nan   

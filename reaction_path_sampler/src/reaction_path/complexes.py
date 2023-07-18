@@ -87,18 +87,17 @@ def select_promising_reactant_product_pairs(
         opt_idxs = []
         for idx in np.argsort(scores):
             idxs = indices[idx]
+
             # rc_conformer = rc_conformers[idxs[0]]
             # pc_conformer = pc_conformers[idxs[1]]
             # rc_adj_mat = comp_adj_mat(rc_conformer.atomic_symbols, rc_conformer.coordinates, charge)
             # pc_adj_mat = comp_adj_mat(pc_conformer.atomic_symbols, pc_conformer.coordinates, charge)
-
             # if np.sum(np.abs(rc_adj_mat - pc_adj_mat)) > 0:
+
             opt_idxs.append(idxs)
 
             if len(opt_idxs) == n_reactant_product_pairs:
                 break
-
-        # opt_idxs = indices[np.argpartition(scores, n_reactant_product_pairs)[:n_reactant_product_pairs]]
     
     return opt_idxs
     

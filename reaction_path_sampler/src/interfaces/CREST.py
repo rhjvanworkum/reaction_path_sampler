@@ -22,7 +22,8 @@ def crest_driver(
         f"-ewin {ref_energy_threshold}",
         f"-rthr {rmsd_threshold}",
         f"-ethr {conf_energy_threshold}",
-        f"-bthr {rotational_threshold}"
+        f"-bthr {rotational_threshold}",
+        f"--notopo"
     ]
 
     @work_in_tmp_dir(
