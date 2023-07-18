@@ -1,14 +1,15 @@
 """
-Script to compute a set of Amide Coupling reactions
+Script to compute a set of DA cycloadditions
 """
-
+import pandas as pd
 import yaml
 import os
 
+
 if __name__ == "__main__":
-    output_folder = './scratch/ac_hatu_test/'
+    output_folder = './scratch/snar_reproduction_test/'
     base_settings_file = 'systems/rps.yaml'
-    file_path = 'data/HATU_ac/ac_hatu_test.txt'
+    file_path = 'data/snar_reproduction_test.csv'
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -16,12 +17,10 @@ if __name__ == "__main__":
     with open(base_settings_file, "r") as f:
         settings = yaml.load(f, Loader=yaml.Loader)
 
-    reaction_smiles_list = []
-    with open(file_path, 'r') as f:
-        for line in f.readlines():
-            reaction_smiles_list.append(line.strip())
-
+    reaction_smiles_list = pd.read_csv(file_path)['sim_reaction_smiles'].values
     for idx, reaction_smiles in enumerate(reaction_smiles_list):
+        reaction_smiles = reaction_smiles_list[idx]
+
         output_dir = os.path.join(output_folder, f'{idx}')
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -30,11 +29,11 @@ if __name__ == "__main__":
         reactants, products = reaction_smiles.split('>>')
         settings['reactant_smiles'] = reactants.split('.')
         settings['product_smiles'] = products.split('.')
-        settings['solvent'] = "DMF"
+        settings['solvent'] = "Methanol"
         settings['use_cregen_pruning'] = False
         settings['n_processes'] = 8
 
-        settings['graph_pruning_threshold'] = 0
+        settings['graph_pruning_threshold'] = 2
         settings['irc_end_graph_threshold'] = 4
 
         # yaml file
@@ -52,5 +51,5 @@ if __name__ == "__main__":
             ])
 
         # execute
-        os.system(f'sbatch --cpus-per-task=16 --time=02:00:00 --qos=cpus150 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
+        os.system(f'sbatch --cpus-per-task=16 --time=2:00:00 --qos=cpus100 --output={output_folder}{idx}/job_%A.out {os.path.join(output_folder, bash_file_name)}')
 
