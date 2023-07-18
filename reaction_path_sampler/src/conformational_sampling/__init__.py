@@ -55,38 +55,26 @@ class ConformerSampler:
                 conf_energy_threshold=self.settings[f"{init}conf_energy_threshold"][len(self.smiles_strings)],
                 rotational_threshold=self.settings[f"{init}rotational_threshold"][len(self.smiles_strings)],
             )
-        
-        print(len(conformers))
-
+    
         if use_graph_pruning:
             pruned_conformers = []
 
-            for idx, conformer in enumerate(conformers):
-                # try:
-                # THIS SEEMS TO BE THE MOST RELIABLE GRAPH EXTRACTION METHOD
-                # other methods would be Avogadro, CREST
-                adj_matrix = comp_ad_mat_xtb(
-                    xyz_string=conformer,
-                    charge=mol.charge,
-                    mult=mol.mult,
-                    solvent=self.solvent,
-                )
+            for conformer in conformers:
+                try:
+                    adj_matrix = comp_ad_mat_xtb(
+                        xyz_string=conformer,
+                        charge=mol.charge,
+                        mult=mol.mult,
+                        solvent=self.solvent,
+                    )
 
-                print(np.sum(np.abs(adj_matrix - mol.connectivity_matrix)))
+                    # TODO: remove this
+                    print(np.sum(np.abs(adj_matrix - mol.connectivity_matrix)))
 
-                # symbols, coords = parse_geometry_from_xyz_string(conformer)
-                # adj_matrix = comp_adj_mat(symbols, coords, mol.charge)
-                # symbols_dict = symbols
-
-                # graph = networkx.from_numpy_array(adj_matrix)
-                # networkx.set_node_attributes(graph, dict(enumerate(symbols_dict)), "atom_label")
-                # networkx.set_node_attributes(graph, dict(enumerate(coords)), "cartesian")
-                # plot_networkx_mol_graph(graph)
-
-                if np.sum(np.abs(mol.connectivity_matrix - adj_matrix)) <= 2:
-                    pruned_conformers.append(conformer)
-                # except:
-                #     continue
+                    if np.sum(np.abs(mol.connectivity_matrix - adj_matrix)) <= self.settings['graph_pruning_threshold']:
+                        pruned_conformers.append(conformer)
+                except:
+                    continue
             
             conformers = pruned_conformers
         

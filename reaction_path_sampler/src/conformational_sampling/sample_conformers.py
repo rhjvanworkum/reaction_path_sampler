@@ -9,7 +9,7 @@ from reaction_path_sampler.src.molecular_system import MolecularSystem
 from reaction_path_sampler.src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 
 
-# TODO: this is currently orderded in pc -> rc direction, why not rc -> pc?
+# TODO: note that this current ordering is in pc -> rc direction, no particular reason not to have rc -> pc as well?
 def sample_reactant_and_product_conformers(
     reactants: MolecularSystem,
     products: MolecularSystem,

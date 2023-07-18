@@ -104,7 +104,6 @@ class MetadynConformerSampler(ConformerSampler):
 
         return confs
 
-    # TODO: pass mol instead of using class attribute
     def sample_conformers(
         self, 
         mol: MolecularSystem,
@@ -113,12 +112,6 @@ class MetadynConformerSampler(ConformerSampler):
         self.settings["wall_radius"] = compute_wall_radius(
             mol=mol,
             settings=self.settings
-        )
-
-        print(
-            len(mol.atoms_list), 
-            mol.connectivity_matrix.shape,
-            mol.init_geometry_autode.coordinates.shape
         )
 
         # 1. sample conformers
@@ -131,9 +124,6 @@ class MetadynConformerSampler(ConformerSampler):
             confs = self._sample_metadynamics_conformers(mol=mol, post_fix="_tight", fixed_atoms=fixed_atoms)
             print(f'metadyn sampling: {time.time() - t}')
             print(f'metadyn sampled n conformers: {len(confs)}')
-
-        with open('pre_filter_confs.xyz', 'w') as f:
-            f.writelines(confs)
 
         # 2. prune conformer set
         t = time.time()
@@ -155,9 +145,6 @@ class MetadynConformerSampler(ConformerSampler):
             conformers=confs,
         )
         print(f'optimizing conformers: {time.time() - t}')
-
-        with open('opt_confs.xyz', 'w') as f:
-            f.writelines(confs)
 
         # 4. prune conformer set
         t = time.time()

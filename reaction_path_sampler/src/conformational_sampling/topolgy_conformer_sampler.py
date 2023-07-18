@@ -116,19 +116,13 @@ class TopologyConformerSampler(ConformerSampler):
             conformers=conformers
         )
         print(f'optimizing conformers with FF: {time.time() - t}')
-
-        with open('ff_optimized_confs.', 'w') as f:
-            f.writelines(confs)
-
+        
         # 2. Optimize conformers
         t = time.time()
         confs = self._optimize_conformers(
             conformers=confs,
         )
         print(f'optimizing conformers: {time.time() - t}')
-
-        with open('xtb_optimized_confs.', 'w') as f:
-            f.writelines(confs)
 
         # 3. prune conformer set
         t = time.time()
