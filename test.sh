@@ -7,4 +7,7 @@ source env.sh
 # python scripts/diels-alder/save_dataset.py
 # python3 test_orca.py
 # python -u search_rxn_path_2.py systems/smc_small.yaml
-python -u scripts/diels-alder/compute_results.py
+# python -u scripts/diels-alder/compute_results.py
+
+
+python -u search_rxn_path.py systems/old/ac_tertiary.yaml

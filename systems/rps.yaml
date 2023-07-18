@@ -8,15 +8,15 @@ output_dir: './scratch/fca'
 reactant_smiles: ["[O+]#CCCc1ccccc1"]
 product_smiles: ["O=C1CCC2=CC=C[CH+]C12"]
 solvent: "Methanol"
-mult: 1
-charge: 0
 
 # task
 use_rxn_mapper: False
 use_templates: False
-check_smiles_end: False
+check_reaction_smiles_end: False
 sample_ts_conformers: False
 barrier_method: "xtb"
+graph_pruning_threshold: 0.0
+irc_end_graph_threshold: 0.0
 
 # how many tries for finding a TS
 max_n_reactant_product_pairs: 5
