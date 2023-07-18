@@ -53,7 +53,7 @@ def check_product_connectivity(
         return False
 
 
-def check_reaction_ends(
+def check_reaction_ends_by_smiles(
     true_rc_smi_list: List[str],
     true_pc_smi_list: List[str],
     pred_rc_smi_list: List[str],
@@ -61,7 +61,7 @@ def check_reaction_ends(
 ) -> bool:
     """
     Function to check whether the simulated reaction actually corresponds to 
-    the intended reaction
+    the intended reaction by comparing the retrieved SMILES strings
     """
     for list in [
         true_rc_smi_list,
@@ -82,3 +82,74 @@ def check_reaction_ends(
         return True
     else:
         return False
+
+
+def check_reactant_product_graphs_identical(
+    true_rc_adj_mat: np.ndarray,
+    true_pc_adj_mat: np.ndarray,   
+    pred_rc_adj_mat: np.ndarray,
+    pred_pc_adj_mat: np.ndarray,
+) -> bool:
+    if (np.sum(np.abs(true_rc_adj_mat - pred_rc_adj_mat)) == 0 and np.sum(np.abs(true_pc_adj_mat - pred_pc_adj_mat)) == 0) or \
+       (np.sum(np.abs(true_rc_adj_mat - pred_pc_adj_mat)) == 0 and np.sum(np.abs(true_pc_adj_mat - pred_rc_adj_mat)) == 0):
+        return True
+    else:
+        return False
+
+def check_reactant_product_graphs_threshold(
+    true_rc_adj_mat: np.ndarray,
+    true_pc_adj_mat: np.ndarray,   
+    pred_rc_adj_mat: np.ndarray,
+    pred_pc_adj_mat: np.ndarray,
+    irc_end_graph_threshold: int,
+) -> bool:
+    if (np.sum(np.abs(true_rc_adj_mat - pred_rc_adj_mat)) == 0 and np.sum(np.abs(true_pc_adj_mat - pred_pc_adj_mat)) <= irc_end_graph_threshold) or \
+       (np.sum(np.abs(true_rc_adj_mat - pred_rc_adj_mat)) <= irc_end_graph_threshold and np.sum(np.abs(true_pc_adj_mat - pred_pc_adj_mat)) == 0) or \
+       (np.sum(np.abs(true_rc_adj_mat - pred_pc_adj_mat)) == 0 and np.sum(np.abs(true_pc_adj_mat - pred_rc_adj_mat)) <= irc_end_graph_threshold) or \
+       (np.sum(np.abs(true_rc_adj_mat - pred_pc_adj_mat)) <= irc_end_graph_threshold and np.sum(np.abs(true_pc_adj_mat - pred_rc_adj_mat)) == 0):
+        return True
+    else:
+        return False
+
+def check_reaction_ends_by_graph_topology(
+    true_rc_adj_mat: np.ndarray,
+    true_pc_adj_mat: np.ndarray,   
+    pred_rc_adj_mat: np.ndarray,
+    pred_pc_adj_mat: np.ndarray,
+    irc_end_graph_threshold: int = 0,
+) -> bool:
+    """
+    Function to check whether the simulated reaction actually corresponds to 
+    the intended reaction by directly comparing the graph topologies of true and
+    predicted reactants / products.
+    """
+
+    print(np.sum(np.abs(true_rc_adj_mat - pred_rc_adj_mat)), np.sum(np.abs(true_pc_adj_mat - pred_pc_adj_mat)))
+    print(np.sum(np.abs(true_rc_adj_mat - pred_pc_adj_mat)), np.sum(np.abs(true_pc_adj_mat - pred_rc_adj_mat)))
+
+    if irc_end_graph_threshold == 0:
+        return check_reactant_product_graphs_identical(
+            true_rc_adj_mat,
+            true_pc_adj_mat,
+            pred_rc_adj_mat,
+            pred_pc_adj_mat
+        )
+    elif irc_end_graph_threshold > 0:
+        return (
+            check_reactant_product_graphs_identical(
+                true_rc_adj_mat,
+                true_pc_adj_mat,
+                pred_rc_adj_mat,
+                pred_pc_adj_mat
+            )
+            or
+            check_reactant_product_graphs_threshold(
+                true_rc_adj_mat,
+                true_pc_adj_mat,
+                pred_rc_adj_mat,
+                pred_pc_adj_mat,
+                irc_end_graph_threshold
+            )
+        )
+    else:
+        raise ValueError("Invalid value for irc_end_graph_threshold")
