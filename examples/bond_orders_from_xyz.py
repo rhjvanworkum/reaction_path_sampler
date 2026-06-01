@@ -21,9 +21,9 @@ xyz_path = Path(__file__).parent / "data" / "ethene.xyz"
 symbols, coords = parse_geometry_from_xyz_string(xyz_path.read_text())
 
 adjacency = np.array(compute_adjacency_matrix(symbols, coords)).astype(int)
-bond_matrix = np.array(
-    find_lewis(symbols, adjacency, q_tot=0, b_mat_only=True, verbose=False)
-)[0].astype(int)
+bond_matrix = np.array(find_lewis(symbols, adjacency, q_tot=0, b_mat_only=True, verbose=False))[
+    0
+].astype(int)
 
 print(f"atoms: {symbols}\n")
 print("adjacency matrix (who is bonded to whom):")
