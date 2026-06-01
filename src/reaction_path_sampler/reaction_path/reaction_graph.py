@@ -18,9 +18,9 @@ from autode.conformers.conformer import Conformer
 from autode.bond_rearrangement import get_bond_rearrangs, BondRearrangement
 from autode.mol_graphs import reac_graph_to_prod_graph
 
-from reaction_path_sampler.src.reaction_path.complexes import compute_optimal_coordinates
-from reaction_path_sampler.src.utils import get_tqdm_disable, remap_conformer
-from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
+from reaction_path_sampler.reaction_path.complexes import compute_optimal_coordinates
+from reaction_path_sampler.utils import get_tqdm_disable, remap_conformer
+from reaction_path_sampler.visualization.plotly import plot_networkx_mol_graph
 
 
 def get_reaction_graph_isomorphism(

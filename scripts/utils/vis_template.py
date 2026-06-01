@@ -1,5 +1,5 @@
-from reaction_path_sampler.src.ts_template import TStemplate
-from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
+from reaction_path_sampler.ts_template import TStemplate
+from reaction_path_sampler.visualization.plotly import plot_networkx_mol_graph
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-from reaction_path_sampler.src.molecular_system import MolecularSystem
+from reaction_path_sampler.molecular_system import MolecularSystem
 
 
 def test_smiles_initialization():

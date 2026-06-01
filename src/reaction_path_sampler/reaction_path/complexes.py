@@ -12,7 +12,7 @@ from autode.species import Complex
 from autode.geom import get_rot_mat_kabsch
 from autode.conformers.conformer import Conformer
 
-from reaction_path_sampler.src.utils import comp_adj_mat, read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
+from reaction_path_sampler.utils import comp_adj_mat, read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 
 
 def generate_reaction_complex(

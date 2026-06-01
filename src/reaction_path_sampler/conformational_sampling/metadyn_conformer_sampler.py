@@ -10,11 +10,11 @@ from tqdm import tqdm
 from typing import List, Any, Dict, Optional, Union
 
 
-from reaction_path_sampler.src.conformational_sampling import ConformerSampler
-from reaction_path_sampler.src.interfaces.XTB import xtb_driver
-from reaction_path_sampler.src.interfaces.xtb_utils import compute_wall_radius, get_atom_constraints, get_fixing_constraints, get_metadynamics_settings, get_wall_constraint
-from reaction_path_sampler.src.molecular_system import MolecularSystem
-from reaction_path_sampler.src.utils import get_tqdm_disable, xyz_string_to_autode_atoms
+from reaction_path_sampler.conformational_sampling import ConformerSampler
+from reaction_path_sampler.interfaces.XTB import xtb_driver
+from reaction_path_sampler.interfaces.xtb_utils import compute_wall_radius, get_atom_constraints, get_fixing_constraints, get_metadynamics_settings, get_wall_constraint
+from reaction_path_sampler.molecular_system import MolecularSystem
+from reaction_path_sampler.utils import get_tqdm_disable, xyz_string_to_autode_atoms
 
 def optimize_autode_conformer(args):
     xyz_string, charge, mult, solvent, method, xcontrol_settings, cores = args

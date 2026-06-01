@@ -9,16 +9,16 @@ from tqdm import tqdm
 import numpy as np
 from openbabel import openbabel as ob
 import time
-from reaction_path_sampler.src.conformational_sampling import ConformerSampler
-from reaction_path_sampler.src.interfaces.XTB import xtb_driver
+from reaction_path_sampler.conformational_sampling import ConformerSampler
+from reaction_path_sampler.interfaces.XTB import xtb_driver
 
-from reaction_path_sampler.src.graphs.lewis import compute_adjacency_matrix, mol_write, mol_write_geom
-from reaction_path_sampler.src.interfaces.xtb_utils import compute_wall_radius, get_wall_constraint
-from reaction_path_sampler.src.molecular_system import MolecularSystem
-from reaction_path_sampler.src.utils import geom_to_xyz_string, get_tqdm_disable, remove_whitespaces_from_xyz_strings, xyz_string_to_geom
-from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
+from reaction_path_sampler.graphs.lewis import compute_adjacency_matrix, mol_write, mol_write_geom
+from reaction_path_sampler.interfaces.xtb_utils import compute_wall_radius, get_wall_constraint
+from reaction_path_sampler.molecular_system import MolecularSystem
+from reaction_path_sampler.utils import geom_to_xyz_string, get_tqdm_disable, remove_whitespaces_from_xyz_strings, xyz_string_to_geom
+from reaction_path_sampler.visualization.plotly import plot_networkx_mol_graph
 
-from reaction_path_sampler.src.graphs.xyz2mol import xyz2AC, __ATOM_LIST__
+from reaction_path_sampler.graphs.xyz2mol import xyz2AC, __ATOM_LIST__
 
 def optimize_conformer(args):
     conformer, mol, solvent, method, xcontrol_settings, cores = args

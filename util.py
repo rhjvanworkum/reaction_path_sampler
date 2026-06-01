@@ -143,8 +143,8 @@ print(new_list)
 """ Plot interpolated paths stuff """
 # import matplotlib.pyplot as plt
 # import numpy as np
-# from reaction_path_sampler.src.molecule import read_xyz_string
-# from reaction_path_sampler.src.utils import read_trajectory_file
+# from reaction_path_sampler.molecule import read_xyz_string
+# from reaction_path_sampler.utils import read_trajectory_file
 
 # structures, _ = read_trajectory_file('better_path.xyz')
 # geometries = []

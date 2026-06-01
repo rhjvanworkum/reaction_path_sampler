@@ -1,7 +1,7 @@
 from typing import Union, List
 from autode.solvent.solvents import solvents
-from reaction_path_sampler.src.interfaces.ORCA import orca_driver
-from reaction_path_sampler.src.interfaces.XTB import xtb_driver
+from reaction_path_sampler.interfaces.ORCA import orca_driver
+from reaction_path_sampler.interfaces.XTB import xtb_driver
 
 
 def get_orca_solv(solvent):

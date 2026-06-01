@@ -3,10 +3,10 @@ import os
 from autode.conformers import Conformer
 from autode.species import Complex
 
-from reaction_path_sampler.src.conformational_sampling.topolgy_conformer_sampler import TopologyConformerSampler
-from reaction_path_sampler.src.conformational_sampling.metadyn_conformer_sampler import MetadynConformerSampler
-from reaction_path_sampler.src.molecular_system import MolecularSystem
-from reaction_path_sampler.src.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
+from reaction_path_sampler.conformational_sampling.topolgy_conformer_sampler import TopologyConformerSampler
+from reaction_path_sampler.conformational_sampling.metadyn_conformer_sampler import MetadynConformerSampler
+from reaction_path_sampler.molecular_system import MolecularSystem
+from reaction_path_sampler.utils import read_trajectory_file, remove_whitespaces_from_xyz_strings, xyz_string_to_autode_atoms
 
 
 # TODO: note that this current ordering is in pc -> rc direction, no particular reason not to have rc -> pc as well?

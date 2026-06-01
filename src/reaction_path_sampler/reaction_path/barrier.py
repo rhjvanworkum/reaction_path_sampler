@@ -3,11 +3,11 @@ import tempfile
 from typing import Callable, List
 import numpy as np
 
-from reaction_path_sampler.src.conformational_sampling.metadyn_conformer_sampler import MetadynConformerSampler
-from reaction_path_sampler.src.interfaces.PYSISYPHUS import pysisyphus_driver
-from reaction_path_sampler.src.interfaces.methods import xtb_single_point_method
-from reaction_path_sampler.src.molecular_system import MolecularSystem
-from reaction_path_sampler.src.utils import read_trajectory_file
+from reaction_path_sampler.conformational_sampling.metadyn_conformer_sampler import MetadynConformerSampler
+from reaction_path_sampler.interfaces.PYSISYPHUS import pysisyphus_driver
+from reaction_path_sampler.interfaces.methods import xtb_single_point_method
+from reaction_path_sampler.molecular_system import MolecularSystem
+from reaction_path_sampler.utils import read_trajectory_file
 
 
 def compute_barrier(

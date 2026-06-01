@@ -9,16 +9,16 @@ import numpy as np
 from rdkit import Chem
 from rdkit.Chem import rdDetermineBonds, Draw
 
-from reaction_path_sampler.src.interfaces.CREST import crest_driver
-from reaction_path_sampler.src.graphs.lewis import compute_adjacency_matrix
-from reaction_path_sampler.src.interfaces.xtb_utils import comp_ad_mat_xtb
-from reaction_path_sampler.src.molecular_system import MolecularSystem
-from reaction_path_sampler.src.molecule import parse_geometry_from_xyz_string
-from reaction_path_sampler.src.graphs.xyz2mol import get_canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
-from reaction_path_sampler.src.utils import comp_adj_mat, get_canonical_smiles
+from reaction_path_sampler.interfaces.CREST import crest_driver
+from reaction_path_sampler.graphs.lewis import compute_adjacency_matrix
+from reaction_path_sampler.interfaces.xtb_utils import comp_ad_mat_xtb
+from reaction_path_sampler.molecular_system import MolecularSystem
+from reaction_path_sampler.molecule import parse_geometry_from_xyz_string
+from reaction_path_sampler.graphs.xyz2mol import get_canonical_smiles_from_xyz_string, get_canonical_smiles_from_xyz_string_ob
+from reaction_path_sampler.utils import comp_adj_mat, get_canonical_smiles
 
-from reaction_path_sampler.src.graphs.xyz2mol import xyz2AC, __ATOM_LIST__
-from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
+from reaction_path_sampler.graphs.xyz2mol import xyz2AC, __ATOM_LIST__
+from reaction_path_sampler.visualization.plotly import plot_networkx_mol_graph
 
 class ConformerSampler:
 

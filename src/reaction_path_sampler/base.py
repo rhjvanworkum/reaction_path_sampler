@@ -4,9 +4,9 @@ import os
 import autode as ade
 from autode.species import Complex
 
-from reaction_path_sampler.src.reaction_path.complexes import generate_reaction_complex
-from reaction_path_sampler.src.reaction_path.mapped_complex import generate_mapped_reaction_complexes
-from reaction_path_sampler.src.utils import set_autode_settings
+from reaction_path_sampler.reaction_path.complexes import generate_reaction_complex
+from reaction_path_sampler.reaction_path.mapped_complex import generate_mapped_reaction_complexes
+from reaction_path_sampler.utils import set_autode_settings
 
 
 class ReactionSampler:

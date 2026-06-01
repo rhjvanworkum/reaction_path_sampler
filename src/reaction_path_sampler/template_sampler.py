@@ -15,15 +15,15 @@ from autode.mol_graphs import (
 )
 from autode.conformers.conformer import Conformer
 
-from reaction_path_sampler.src import ReactionSampler
-from reaction_path_sampler.src.interfaces.PYSISYPHUS import pysisyphus_driver
-from reaction_path_sampler.src.interfaces.XTB import xtb_driver
-from reaction_path_sampler.src.interfaces.xtb_utils import get_fixing_constraints
-from reaction_path_sampler.src.reaction_path.reaction_ends import check_reaction_ends
-from reaction_path_sampler.src.ts_template import TStemplate
-from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, write_output_file
-from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
-from reaction_path_sampler.src.graphs.xyz2mol import get_canonical_smiles_from_xyz_string
+from reaction_path_sampler.base import ReactionSampler
+from reaction_path_sampler.interfaces.PYSISYPHUS import pysisyphus_driver
+from reaction_path_sampler.interfaces.XTB import xtb_driver
+from reaction_path_sampler.interfaces.xtb_utils import get_fixing_constraints
+from reaction_path_sampler.reaction_path.reaction_ends import check_reaction_ends
+from reaction_path_sampler.ts_template import TStemplate
+from reaction_path_sampler.utils import autode_conf_to_xyz_string, get_canonical_smiles, write_output_file
+from reaction_path_sampler.visualization.plotly import plot_networkx_mol_graph
+from reaction_path_sampler.graphs.xyz2mol import get_canonical_smiles_from_xyz_string
 
 
 class TemplateSampler(ReactionSampler):

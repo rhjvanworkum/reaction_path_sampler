@@ -5,7 +5,7 @@ import pandas as pd
 from rxnmapper import RXNMapper
 import h5py as h5
 
-from reaction_path_sampler.src.utils import read_trajectory_file
+from reaction_path_sampler.utils import read_trajectory_file
 
 
 atomic_number_dict = {

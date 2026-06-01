@@ -2,10 +2,10 @@ from typing import List, Dict, Any, Union
 from openbabel import pybel
 import numpy as np
 
-from reaction_path_sampler.src.interfaces.XTB import xtb_driver
-from reaction_path_sampler.src.molecular_system import MolecularSystem
-from reaction_path_sampler.src.constants import bohr_ang
-from reaction_path_sampler.src.utils import get_reactive_coordinate_value, get_adj_mat_from_mol_block_string
+from reaction_path_sampler.interfaces.XTB import xtb_driver
+from reaction_path_sampler.molecular_system import MolecularSystem
+from reaction_path_sampler.constants import bohr_ang
+from reaction_path_sampler.utils import get_reactive_coordinate_value, get_adj_mat_from_mol_block_string
 
 def comp_ad_mat_xtb(
     xyz_string: str,

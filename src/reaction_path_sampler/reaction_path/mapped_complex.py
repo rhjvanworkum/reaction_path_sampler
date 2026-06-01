@@ -11,7 +11,7 @@ import autode as ade
 from autode.species.complex import Complex
 from autode.conformers import Conformer
 
-from reaction_path_sampler.src.reaction_path.complexes import generate_reaction_complex
+from reaction_path_sampler.reaction_path.complexes import generate_reaction_complex
 
 
 # def calc_box(coords: np.ndarray):

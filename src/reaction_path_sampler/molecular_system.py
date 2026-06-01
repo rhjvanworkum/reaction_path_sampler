@@ -6,12 +6,12 @@ import autode as ade
 from autode.conformers.conformer import Conformer
 import networkx as nx
 from autode.species import Complex
-from reaction_path_sampler.src.graphs.lewis import find_lewis
-from reaction_path_sampler.src.reaction_path.complexes import generate_reaction_complex
-from reaction_path_sampler.src.reaction_path.reaction_graph import get_reaction_graph_isomorphism
+from reaction_path_sampler.graphs.lewis import find_lewis
+from reaction_path_sampler.reaction_path.complexes import generate_reaction_complex
+from reaction_path_sampler.reaction_path.reaction_graph import get_reaction_graph_isomorphism
 
-from reaction_path_sampler.src.utils import autode_conf_to_xyz_string, get_canonical_smiles, remap_conformer, xyz_string_to_autode_atoms
-from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
+from reaction_path_sampler.utils import autode_conf_to_xyz_string, get_canonical_smiles, remap_conformer, xyz_string_to_autode_atoms
+from reaction_path_sampler.visualization.plotly import plot_networkx_mol_graph
 
 class Reaction:
 

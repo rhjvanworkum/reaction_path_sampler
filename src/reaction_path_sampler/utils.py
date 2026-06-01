@@ -11,8 +11,8 @@ import logging
 import networkx
 
 
-from reaction_path_sampler.src.graphs.xyz2mol import xyz2AC, __ATOM_LIST__
-from reaction_path_sampler.src.visualization.plotly import plot_networkx_mol_graph
+from reaction_path_sampler.graphs.xyz2mol import xyz2AC, __ATOM_LIST__
+from reaction_path_sampler.visualization.plotly import plot_networkx_mol_graph
 
 def get_adj_mat_from_mol_block_string(mol_block_string: str) -> np.ndarray:
     nodes1, nodes2 = [], []

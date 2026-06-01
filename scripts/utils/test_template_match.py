@@ -1,7 +1,7 @@
 import yaml
-from reaction_path_sampler.src.template_sampler import TemplateSampler
+from reaction_path_sampler.template_sampler import TemplateSampler
 
-from reaction_path_sampler.src.ts_template import TStemplate, get_ts_templates
+from reaction_path_sampler.ts_template import TStemplate, get_ts_templates
 
 from autode.bond_rearrangement import get_bond_rearrangs
 from autode.mol_graphs import (
