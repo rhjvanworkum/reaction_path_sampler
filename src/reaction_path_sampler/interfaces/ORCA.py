@@ -1,56 +1,44 @@
-from typing import Literal, Optional, Union
 import time
+from typing import Literal
+
 import autode as ade
 from autode.atoms import Atom
-
-import os
+from autode.utils import work_in_tmp_dir
 from autode.wrappers.ORCA import ORCA
-from autode.utils import run_in_tmp_environment, work_in_tmp_dir
 
-def get_autode_species(
-    xyz_string: Union[list, str],
-    charge: int,
-    mult: int,
-    solvent: str
-) -> ade.Species:
+
+def get_autode_species(xyz_string: list | str, charge: int, mult: int, solvent: str) -> ade.Species:
     if isinstance(xyz_string, list):
         atom_lines = xyz_string
     else:
-        atom_lines = xyz_string.split('\n')
-    
+        atom_lines = xyz_string.split("\n")
+
     atoms = []
 
     for line in atom_lines:
         splits = line.split()
         if len(splits) == 4:
             symbol, x, y, z = splits
-            atoms.append(Atom(
-                symbol, float(x), float(y), float(z)
-            ))
+            atoms.append(Atom(symbol, float(x), float(y), float(z)))
 
     return ade.Species(
-        name=str(time.time()),
-        atoms=atoms,
-        charge=charge,
-        mult=mult,
-        solvent_name=solvent
+        name=str(time.time()), atoms=atoms, charge=charge, mult=mult, solvent_name=solvent
     )
 
+
 def orca_driver(
-    xyz_string: Union[list, str],
+    xyz_string: list | str,
     charge: int,
     mult: int,
     job: Literal["sp"] = "sp",
-    solvent: Optional[str] = None,
+    solvent: str | None = None,
     basis_set: str = "6-31+G**",
-    xc_functional: str = "B3LYP",  
-    n_cores: int = 1
-):  
+    xc_functional: str = "B3LYP",
+    n_cores: int = 1,
+):
     ade.Config.n_cores = n_cores
     ade.Config.ORCA.path = "/home/rhjvanworkum/orca/orca"
-    ade.Config.ORCA.keywords.sp = [
-        xc_functional, basis_set
-    ]   
+    ade.Config.ORCA.keywords.sp = [xc_functional, basis_set]
 
     @work_in_tmp_dir(
         filenames_to_copy=[],
@@ -61,10 +49,11 @@ def orca_driver(
         try:
             ade_species.single_point(method=ORCA())
             return ade_species.energy
-        except:
+        except Exception:
             return None
-    
+
     return compute()
+
 
 # def orca_driver(
 #     xyz_string: str,
@@ -73,14 +62,14 @@ def orca_driver(
 #     job: Literal["sp"] = "sp",
 #     solvent: Optional[str] = None,
 #     basis_set: str = "6-31G",
-#     xc_functional: str = "B3LYP",  
+#     xc_functional: str = "B3LYP",
 #     n_cores: int = 8
-# ):  
+# ):
 #     ade.Config.n_cores = n_cores
 #     ade.Config.ORCA.path = "/home/rhjvanworkum/orca/orca"
 #     ade.Config.ORCA.keywords.sp = [
 #         xc_functional, basis_set
-#     ]   
+#     ]
 
 #     @work_in_tmp_dir(
 #         filenames_to_copy=[],

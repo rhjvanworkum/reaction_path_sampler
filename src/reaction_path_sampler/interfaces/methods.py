@@ -1,5 +1,5 @@
-from typing import Union, List
 from autode.solvent.solvents import solvents
+
 from reaction_path_sampler.interfaces.ORCA import orca_driver
 from reaction_path_sampler.interfaces.XTB import xtb_driver
 
@@ -9,12 +9,9 @@ def get_orca_solv(solvent):
         if solv.xtb == solvent:
             return solv.orca
 
+
 def xtb_single_point_method(
-    geometry: Union[str, List[str]],
-    charge: int,
-    mult: int,
-    solvent: str,
-    n_cores: int
+    geometry: str | list[str], charge: int, mult: int, solvent: str, n_cores: int
 ) -> float:
     return xtb_driver(
         xyz_string=geometry,
@@ -26,12 +23,9 @@ def xtb_single_point_method(
         n_cores=n_cores,
     )
 
+
 def orca_single_point_method(
-    geometry: Union[str, List[str]],
-    charge: int,
-    mult: int,
-    solvent: str,
-    n_cores: int
+    geometry: str | list[str], charge: int, mult: int, solvent: str, n_cores: int
 ) -> float:
     orca_solvent = get_orca_solv(solvent)
     return orca_driver(
@@ -42,11 +36,11 @@ def orca_single_point_method(
         basis_set="6-31G",
         job="sp",
         solvent=orca_solvent,
-        n_cores=1
+        n_cores=1,
     )
 
 
 barrier_calculation_methods_dict = {
     "xtb": xtb_single_point_method,
-    "orca_B3LYP": orca_single_point_method
+    "orca_B3LYP": orca_single_point_method,
 }

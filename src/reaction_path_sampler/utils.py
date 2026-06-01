@@ -1,25 +1,32 @@
 """
 general utils
 """
-from typing import Dict, List, Tuple
-from rdkit import Chem
-import numpy as np
+
+import logging
 import os
 import re
-from openbabel import pybel
-import logging
+
+import autode as ade
 import networkx
+import numpy as np
+from autode.atoms import Atom as AutodeAtom
+from autode.atoms import Atoms
+from autode.conformers.conformer import Conformer
+from autode.exceptions import XYZfileWrongFormat
+from autode.values import Distance
+from openbabel import pybel
+from rdkit import Chem
 
-
-from reaction_path_sampler.graphs.xyz2mol import xyz2AC, __ATOM_LIST__
+from reaction_path_sampler.graphs.xyz2mol import __ATOM_LIST__, xyz2AC
 from reaction_path_sampler.visualization.plotly import plot_networkx_mol_graph
+
 
 def get_adj_mat_from_mol_block_string(mol_block_string: str) -> np.ndarray:
     nodes1, nodes2 = [], []
-    n_atoms= 0
+    n_atoms = 0
 
-    mol_string_lines = mol_block_string.split('\n')
-    for idx, line in enumerate(mol_string_lines[4:]):
+    mol_string_lines = mol_block_string.split("\n")
+    for line in mol_string_lines[4:]:
         elements = line.split()
 
         if len(elements) == 16:
@@ -32,17 +39,19 @@ def get_adj_mat_from_mol_block_string(mol_block_string: str) -> np.ndarray:
 
     adj_mat = np.zeros((n_atoms, n_atoms))
 
-    for node1, node2 in zip(nodes1, nodes2):
+    for node1, node2 in zip(nodes1, nodes2, strict=False):
         adj_mat[node1 - 1, node2 - 1] = 1
 
     adj_mat = adj_mat + adj_mat.T
 
     return adj_mat
 
+
 def comp_adj_mat(symbols, coords, charge):
     symbols = [__ATOM_LIST__.index(s.lower()) + 1 for s in symbols]
     adj_matrix, _ = xyz2AC(symbols, coords, charge, use_huckel=False)
     return adj_matrix
+
 
 def visualize_graph(symbols, coords, charge):
     adj_matrix = comp_adj_mat(symbols, coords, charge)
@@ -51,6 +60,7 @@ def visualize_graph(symbols, coords, charge):
     networkx.set_node_attributes(graph, dict(enumerate(coords)), "cartesian")
     plot_networkx_mol_graph(graph)
 
+
 def get_tqdm_disable():
     if logging.getLogger().getEffectiveLevel() > logging.INFO:
         disable = True
@@ -58,44 +68,45 @@ def get_tqdm_disable():
         disable = False
     return disable
 
+
 def write_output_file(variable, name):
     if variable is not None:
-        with open(name, 'w') as f:
+        with open(name, "w") as f:
             f.writelines(variable)
+
 
 def get_canonical_smiles(smiles: str) -> str:
     # TODO: this will not work for enantioselective reactions??
     mol = Chem.MolFromSmiles(smiles)
-    Chem.RemoveStereochemistry(mol) 
+    Chem.RemoveStereochemistry(mol)
     return Chem.MolToSmiles(mol)
 
-def get_reactive_coordinate_value(
-    mol: pybel.Molecule,
-    reactive_coordinate: List[int]
-) -> float:
+
+def get_reactive_coordinate_value(mol: pybel.Molecule, reactive_coordinate: list[int]) -> float:
     atoms = [mol.GetAtom(i) for i in reactive_coordinate]
-    if len(atoms)==2:
+    if len(atoms) == 2:
         return atoms[0].GetDistance(atoms[1])
-    if len(atoms)==3:
+    if len(atoms) == 3:
         return mol.GetAngle(*atoms)
-    if len(atoms)==4:
+    if len(atoms) == 4:
         return mol.GetTorsion(*atoms)
 
 
 def comment_line_energy(comment_line):
-    m = re.search('-?[0-9]*\.[0-9]*', comment_line)
+    m = re.search("-?[0-9]*\.[0-9]*", comment_line)
     if m:
         E = float(m.group())
     else:
         E = np.nan
     return E
 
-def read_trajectory_file(filepath: str, index=None, as_list=False) -> Tuple[List[str], List[float]]:
+
+def read_trajectory_file(filepath: str, index=None, as_list=False) -> tuple[list[str], list[float]]:
     """Read an xyz file containing a trajectory."""
     structures = []
     energies = []
     k = 0
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         while True:
             first_line = f.readline()
             # EOF -> blank line
@@ -112,13 +123,13 @@ def read_trajectory_file(filepath: str, index=None, as_list=False) -> Tuple[List
             this_mol += comment_line
             E = comment_line_energy(comment_line)
 
-            for i in range(natoms):
+            for _ in range(natoms):
                 this_mol += f.readline()
 
             if index is None:
                 structures += [this_mol]
                 energies += [E]
-            
+
             else:
                 if k == index:
                     if as_list:
@@ -129,23 +140,23 @@ def read_trajectory_file(filepath: str, index=None, as_list=False) -> Tuple[List
             k += 1
     return structures, energies
 
-def remove_whitespaces_from_xyz_strings(
-    xyz_string: List[str]
-) -> str:
+
+def remove_whitespaces_from_xyz_strings(xyz_string: list[str]) -> str:
     lines = []
     for line in xyz_string:
-        lines += list(filter(lambda x: len(x) > 0, line.split('\n')))
+        lines += list(filter(lambda x: len(x) > 0, line.split("\n")))
 
     for i in range(len(lines)):
         j = 0
         while j < len(lines[i]) and lines[i][j].isspace():
             j += 1
         lines[i] = lines[i][j:]
-    output_text = '\n'.join(lines)
+    output_text = "\n".join(lines)
     return output_text
 
-def xyz_string_to_geom(xyz_string: str) -> Tuple[List[str], np.array]:
-    lines = xyz_string.split('\n')
+
+def xyz_string_to_geom(xyz_string: str) -> tuple[list[str], np.array]:
+    lines = xyz_string.split("\n")
     atoms, coords = [], []
     for line in lines[2:]:
         if len(line.split()) == 4:
@@ -154,27 +165,21 @@ def xyz_string_to_geom(xyz_string: str) -> Tuple[List[str], np.array]:
             coords.append([float(x), float(y), float(z)])
     return atoms, np.array(coords)
 
-def geom_to_xyz_string(atoms: List[str], geom: np.array) -> str:
+
+def geom_to_xyz_string(atoms: list[str], geom: np.array) -> str:
     lines = []
-    lines.append(f'{len(atoms)}')
-    lines.append('comment')
-    for a, coord in zip(atoms, geom):
+    lines.append(f"{len(atoms)}")
+    lines.append("comment")
+    for a, coord in zip(atoms, geom, strict=False):
         lines.append(f"{a} {coord[0]:.4f} {coord[1]:.4f} {coord[2]:.4f}")
     return "\n".join(lines) + "\n"
 
-"""
-autodE utils
-"""
-import autode as ade
-from autode.conformers.conformer import Conformer
-from autode.atoms import Atoms
-from autode.values import Distance
-from autode.atoms import Atom as AutodeAtom
-from autode.exceptions import XYZfileWrongFormat
+
+# --- autodE utils ---
 
 
 def set_autode_settings(settings):
-    ade.Config.n_cores = settings['xtb_n_cores']
+    ade.Config.n_cores = settings["xtb_n_cores"]
     ade.Config.XTB.path = os.environ["XTB_PATH"]
     ade.Config.rmsd_threshold = Distance(0.3, units="Å")
     ade.Config.num_conformers = settings["num_conformers"]
@@ -182,21 +187,18 @@ def set_autode_settings(settings):
     ade.Config.num_complex_random_rotations = settings["num_complex_random_rotations"]
 
 
-def remap_conformer(
-    conformer: Conformer, 
-    mapping: Dict[int, int]
-) -> Conformer:
+def remap_conformer(conformer: Conformer, mapping: dict[int, int]) -> Conformer:
     return Conformer(
         name=conformer.name,
         atoms=[conformer.atoms[i] for i in sorted(mapping, key=mapping.get)],
         charge=conformer.charge,
-        mult=conformer.mult
+        mult=conformer.mult,
     )
 
+
 def sort_complex_conformers_on_distance(
-    conformers: List[Conformer],
-    mols: List[ade.Molecule] 
-) -> List[Conformer]:
+    conformers: list[Conformer], mols: list[ade.Molecule]
+) -> list[Conformer]:
     """
     Returns a list of autodE confomers sorted on ascending distance between
     parts of a complex
@@ -206,17 +208,45 @@ def sort_complex_conformers_on_distance(
         if len(mols) == 1:
             continue
         elif len(mols) == 2:
-            centroid_1 = np.mean(np.array([atom.coord for atom in conformer.atoms[:len(mols[0].atoms)]]), axis=0)
-            centroid_2 = np.mean(np.array([atom.coord for atom in conformer.atoms[len(mols[0].atoms):]]), axis=0)
+            centroid_1 = np.mean(
+                np.array([atom.coord for atom in conformer.atoms[: len(mols[0].atoms)]]), axis=0
+            )
+            centroid_2 = np.mean(
+                np.array([atom.coord for atom in conformer.atoms[len(mols[0].atoms) :]]), axis=0
+            )
             distances.append(np.linalg.norm(centroid_2 - centroid_1))
         elif len(mols) == 3:
-            centroid_1 = np.mean(np.array([atom.coord for atom in conformer.atoms[:len(mols[0].atoms)]]), axis=0)
-            centroid_2 = np.mean(np.array([atom.coord for atom in conformer.atoms[len(mols[0].atoms):len(mols[0].atoms) + len(mols[1].atoms)]]), axis=0)
-            centroid_3 = np.mean(np.array([atom.coord for atom in conformer.atoms[len(mols[0].atoms) + len(mols[1].atoms):]]), axis=0)
-            distances.append(np.linalg.norm(centroid_2 - centroid_1) + np.linalg.norm(centroid_3 - centroid_1) + np.linalg.norm(centroid_3 - centroid_2))
+            centroid_1 = np.mean(
+                np.array([atom.coord for atom in conformer.atoms[: len(mols[0].atoms)]]), axis=0
+            )
+            centroid_2 = np.mean(
+                np.array(
+                    [
+                        atom.coord
+                        for atom in conformer.atoms[
+                            len(mols[0].atoms) : len(mols[0].atoms) + len(mols[1].atoms)
+                        ]
+                    ]
+                ),
+                axis=0,
+            )
+            centroid_3 = np.mean(
+                np.array(
+                    [
+                        atom.coord
+                        for atom in conformer.atoms[len(mols[0].atoms) + len(mols[1].atoms) :]
+                    ]
+                ),
+                axis=0,
+            )
+            distances.append(
+                np.linalg.norm(centroid_2 - centroid_1)
+                + np.linalg.norm(centroid_3 - centroid_1)
+                + np.linalg.norm(centroid_3 - centroid_2)
+            )
         else:
             raise ValueError(f"Why does complex contain {len(mols)} mols")
-    
+
     if len(mols) == 1:
         return conformers
     else:
@@ -243,28 +273,27 @@ def xyz_string_to_autode_atoms(xyz_file: str) -> Atoms:
     """
     atoms = Atoms()
 
-    xyz_file = xyz_file.split('\n')
+    xyz_file = xyz_file.split("\n")
 
     try:
         # First item in an xyz file is the number of atoms
         n_atoms = int(xyz_file[0].split()[0])
 
-    except (IndexError, ValueError):
-        raise XYZfileWrongFormat("Number of atoms not found")
+    except (IndexError, ValueError) as err:
+        raise XYZfileWrongFormat("Number of atoms not found") from err
 
     # XYZ lines should be the following 2 + n_atoms lines
     xyz_lines = xyz_file[2 : n_atoms + 2]
 
     for i, line in enumerate(xyz_lines):
-
         try:
             atom_label, x, y, z = line.split()[:4]
             atoms.append(AutodeAtom(atomic_symbol=atom_label, x=x, y=y, z=z))
 
-        except (IndexError, TypeError, ValueError):
+        except (IndexError, TypeError, ValueError) as err:
             raise XYZfileWrongFormat(
-                f"Coordinate line {i} ({line}) " f"not the correct format"
-            )
+                f"Coordinate line {i} ({line}) not the correct format"
+            ) from err
 
     if len(atoms) != n_atoms:
         raise XYZfileWrongFormat(
@@ -272,5 +301,5 @@ def xyz_string_to_autode_atoms(xyz_file: str) -> Atoms:
             f"not equal to the number of atoms found "
             f"{len(atoms)}"
         )
-    
+
     return atoms

@@ -1,11 +1,11 @@
 """
 File containing interface to XTB
 """
-import logging
+
 import os
 import subprocess
-from typing import Any, Dict, List, Literal, Optional
 import time
+from typing import Literal
 
 from autode.utils import run_in_tmp_environment, work_in_tmp_dir
 
@@ -17,28 +17,21 @@ def xtb_driver(
     charge: int,
     mult: int,
     job: Literal["sp", "mol", "opt", "scan", "metadyn"] = "sp",
-    method: str = '2',
-    solvent: Optional[str] = None,
-    xcontrol_settings: Optional[str] = None,
-    n_cores: int = 4
+    method: str = "2",
+    solvent: str | None = None,
+    xcontrol_settings: str | None = None,
+    n_cores: int = 4,
 ):
     if mult != 1:
-        print(f'WARNING: multiplicity is {mult}')
+        print(f"WARNING: multiplicity is {mult}")
 
-    flags = [
-        "--chrg",
-        str(charge),
-        "--uhf",
-        str(mult - 1),
-        "--gfn",
-        str(method)
-    ]
+    flags = ["--chrg", str(charge), "--uhf", str(mult - 1), "--gfn", str(method)]
 
     if solvent is not None:
         flags += ["--gbsa", solvent]
 
     if xcontrol_settings is not None:
-        flags += ["--input", 'mol.input']
+        flags += ["--input", "mol.input"]
 
     if job == "opt" or job == "scan":
         flags += ["--opt"]
@@ -50,63 +43,77 @@ def xtb_driver(
         kept_file_exts=(),
     )
     @run_in_tmp_environment(
-        OMP_NUM_THREADS=n_cores, 
-        MKL_NUM_THREADS=n_cores,
-        GFORTRAN_UNBUFFERED_ALL=1
+        OMP_NUM_THREADS=n_cores, MKL_NUM_THREADS=n_cores, GFORTRAN_UNBUFFERED_ALL=1
     )
     def execute_xtb():
         # xcontrol file
         if xcontrol_settings is not None:
-            with open('mol.input', 'w') as f:
+            with open("mol.input", "w") as f:
                 f.write(xcontrol_settings)
-        
+
         # xyz file
-        xyz_file_name = f'mol-{time.time()}.xyz'
-        with open(xyz_file_name, 'w') as f:
+        xyz_file_name = f"mol-{time.time()}.xyz"
+        with open(xyz_file_name, "w") as f:
             f.writelines(xyz_string)
-        with open('ref.xyz', 'w') as f:
+        with open("ref.xyz", "w") as f:
             f.writelines(xyz_string)
-        
+
         # execute xtb
-        cmd = f'{os.environ["XTB_PATH"]} {xyz_file_name} {" ".join(flags)}'
+        cmd = f"{os.environ['XTB_PATH']} {xyz_file_name} {' '.join(flags)}"
         proc = subprocess.Popen(
-            cmd.split(), 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.DEVNULL, 
+            cmd.split(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             text=True,
         )
         output = proc.communicate()[0]
 
         # with open
         energy = None
-        for line in reversed(output.split('\n')):
+        for line in reversed(output.split("\n")):
             if "total E" in line:
                 energy = float(line.split()[-1])
             if "TOTAL ENERGY" in line:
                 energy = float(line.split()[-3])
 
         mol_string = None
-        if job == "mol" and os.path.exists('xtbtopo.mol'):
-            with open('xtbtopo.mol', 'r') as f:
+        if job == "mol" and os.path.exists("xtbtopo.mol"):
+            with open("xtbtopo.mol") as f:
                 mol_string = f.read()
 
         opt_structure = None
-        if job == "opt" and os.path.exists('xtbopt.xyz'):
-            opt_structures, _ = read_trajectory_file('xtbopt.xyz')
+        if job == "opt" and os.path.exists("xtbopt.xyz"):
+            opt_structures, _ = read_trajectory_file("xtbopt.xyz")
             opt_structure = opt_structures[0]
 
         md_structures, md_energies = None, None
-        if job == "metadyn" and os.path.exists('xtb.trj'):
+        if job == "metadyn" and os.path.exists("xtb.trj"):
             md_structures, md_energies = read_trajectory_file("xtb.trj")
 
         scan_structures, scan_energies = None, None
-        if job == "scan" and os.path.exists('xtbscan.log'):
-            scan_structures, scan_energies  = read_trajectory_file("xtbscan.log")
-   
-        return energy, mol_string, opt_structure, md_structures, md_energies, scan_structures, scan_energies
-    
-    energy, mol_string, opt_structure, md_structures, md_energies, scan_structures, scan_energies = execute_xtb()
-    
+        if job == "scan" and os.path.exists("xtbscan.log"):
+            scan_structures, scan_energies = read_trajectory_file("xtbscan.log")
+
+        return (
+            energy,
+            mol_string,
+            opt_structure,
+            md_structures,
+            md_energies,
+            scan_structures,
+            scan_energies,
+        )
+
+    (
+        energy,
+        mol_string,
+        opt_structure,
+        md_structures,
+        md_energies,
+        scan_structures,
+        scan_energies,
+    ) = execute_xtb()
+
     if job == "sp":
         return energy
     elif job == "mol":

@@ -1,8 +1,5 @@
-from typing import Dict, List, Tuple, Any
 import os
-
-import autode as ade
-from autode.species import Complex
+from typing import Any
 
 from reaction_path_sampler.reaction_path.complexes import generate_reaction_complex
 from reaction_path_sampler.reaction_path.mapped_complex import generate_mapped_reaction_complexes
@@ -10,16 +7,12 @@ from reaction_path_sampler.utils import set_autode_settings
 
 
 class ReactionSampler:
-
-    def __init__(
-        self,
-        settings: Dict[str, Any]
-    ) -> None:
+    def __init__(self, settings: dict[str, Any]) -> None:
         self.settings = settings
 
         # create output dir
-        if not os.path.exists(self.settings['output_dir']):
-            os.makedirs(self.settings['output_dir'])
+        if not os.path.exists(self.settings["output_dir"]):
+            os.makedirs(self.settings["output_dir"])
 
         # set autode settings
         set_autode_settings(settings)
@@ -27,7 +20,7 @@ class ReactionSampler:
         self._rc_complex = None
         self._pc_complex = None
 
-        self.solvent = self.settings['solvent']
+        self.solvent = self.settings["solvent"]
         self._charge = None
         self._mult = None
 
@@ -62,15 +55,15 @@ class ReactionSampler:
         """
         Generate reactant and product complexes using autodE.
         """
-        if self.settings['use_rxn_mapper']:
+        if self.settings["use_rxn_mapper"]:
             rc_complex, pc_complex = generate_mapped_reaction_complexes(
-                self.settings['reactant_smiles'],
-                self.settings['product_smiles'],
-                solvent=self.solvent
+                self.settings["reactant_smiles"],
+                self.settings["product_smiles"],
+                solvent=self.solvent,
             )
         else:
-            rc_complex = generate_reaction_complex(self.settings['reactant_smiles'])
-            pc_complex = generate_reaction_complex(self.settings['product_smiles'])
+            rc_complex = generate_reaction_complex(self.settings["reactant_smiles"])
+            pc_complex = generate_reaction_complex(self.settings["product_smiles"])
 
         assert rc_complex.charge == pc_complex.charge
         assert rc_complex.mult == pc_complex.mult

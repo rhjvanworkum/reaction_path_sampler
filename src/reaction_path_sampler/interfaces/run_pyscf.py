@@ -1,29 +1,21 @@
 import argparse
-
-from typing import Literal, Optional
+from typing import Literal
 
 from pyscf import gto
 
-SOLVENT_CONSTANT_DICT = {
-    'Methanol': 32.613
-}
+SOLVENT_CONSTANT_DICT = {"Methanol": 32.613}
+
 
 def run_pscf(
     xyz_string: str,
     charge: int,
     spin: int,
     job: Literal["sp"] = "sp",
-    solvent: Optional[str] = None,
+    solvent: str | None = None,
     basis_set: str = "6-31G",
-    xc_functional: str = "B3LYP",  
-):  
-    mol = gto.M(
-        atom=xyz_string,
-        basis=basis_set,
-        verbose=0,
-        charge=charge,
-        spin=spin
-    )
+    xc_functional: str = "B3LYP",
+):
+    mol = gto.M(atom=xyz_string, basis=basis_set, verbose=0, charge=charge, spin=spin)
 
     mf = mol.RKS(xc=xc_functional)
     if solvent is not None:
@@ -34,15 +26,16 @@ def run_pscf(
     energy = mf.e_tot
     return energy
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--xyz_file', type=str)
-    parser.add_argument('--charge', type=int)
-    parser.add_argument('--spin', type=int)
-    parser.add_argument('--solvent', type=str)
+    parser.add_argument("--xyz_file", type=str)
+    parser.add_argument("--charge", type=int)
+    parser.add_argument("--spin", type=int)
+    parser.add_argument("--solvent", type=str)
     args = parser.parse_args()
 
-    with open(args.xyz_file, 'r') as f:
+    with open(args.xyz_file) as f:
         lines = f.readlines()
 
     energy = run_pscf(
@@ -50,9 +43,8 @@ if __name__ == "__main__":
         charge=args.charge,
         spin=args.spin,
         job="sp",
-        solvent=args.solvent
+        solvent=args.solvent,
     )
 
-    with open('output.txt', 'w') as f:
+    with open("output.txt", "w") as f:
         f.writelines(str(energy))
-    

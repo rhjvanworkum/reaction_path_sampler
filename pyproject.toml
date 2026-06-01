@@ -79,7 +79,15 @@ packages = ["src/reaction_path_sampler"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-extend-exclude = ["research", "notebooks"]
+# research/ and notebooks/ hold one-off experiments; graphs/{lewis,xyz2mol}.py
+# are vendored verbatim from upstream projects (YARP, Jensen xyz2mol) and are
+# linted/typed as-is.
+extend-exclude = [
+    "research",
+    "notebooks",
+    "src/reaction_path_sampler/graphs/lewis.py",
+    "src/reaction_path_sampler/graphs/xyz2mol.py",
+]
 
 [tool.ruff.lint]
 # Start lenient: pyflakes (F) + a sensible subset of pycodestyle/pyupgrade/isort.
