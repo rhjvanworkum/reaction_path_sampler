@@ -199,9 +199,9 @@ class MolecularSystem:
         mult: Optional[int] = None,
     ) -> 'MolecularSystem':
         rdkit_mol = Chem.MolFromSmiles(smiles)
-        rdkit_mol = Chem.AddHs(rdkit_mol)
         if rdkit_mol is None:
             raise ValueError("Could not parse SMILES string")
+        rdkit_mol = Chem.AddHs(rdkit_mol)
         return cls(smiles, rdkit_mol, mult)
 
     @classmethod

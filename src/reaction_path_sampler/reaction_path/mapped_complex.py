@@ -132,10 +132,10 @@ def get_autode_geometry_from_mapped_rdkit_conformer(mols: List[Chem.Mol]) -> Lis
 
         mols_atoms[1] = [[atom[0], atom[1] + min_dist * (
             (centroid_2 - centroid_1) / np.linalg.norm(centroid_2 - centroid_1)
-        ), atom[2], atom[3]] for atom in mols_atoms[0]]
+        ), atom[2], atom[3]] for atom in mols_atoms[1]]
         mols_atoms[2] = [[atom[0], atom[1] + min_dist * (
             (centroid_3 - centroid_1) / np.linalg.norm(centroid_3 - centroid_1)
-        ), atom[2], atom[3]] for atom in mols_atoms[0]]
+        ), atom[2], atom[3]] for atom in mols_atoms[2]]
 
         atoms = mols_atoms[0] + mols_atoms[1] + mols_atoms[2]
 

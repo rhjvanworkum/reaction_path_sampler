@@ -73,7 +73,7 @@ class ReactionSampler:
             pc_complex = generate_reaction_complex(self.settings['product_smiles'])
 
         assert rc_complex.charge == pc_complex.charge
-        assert pc_complex.mult == pc_complex.mult
+        assert rc_complex.mult == pc_complex.mult
 
         self._rc_complex = rc_complex
         self._pc_complex = pc_complex
