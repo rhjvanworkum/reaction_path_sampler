@@ -1,0 +1,205 @@
+"""
+Each reaction path needs a mapping from the atom indexing in the reactant graph & product graph
+"""
+
+import time
+from concurrent.futures import ProcessPoolExecutor
+from typing import Any
+
+import autode as ade
+import networkx as nx
+import numpy as np
+from autode.bond_rearrangement import BondRearrangement, get_bond_rearrangs
+from autode.conformers.conformer import Conformer
+from autode.mol_graphs import reac_graph_to_prod_graph
+from autode.species import Complex
+from tqdm import tqdm
+
+from reaction_path_sampler.reaction_path.complexes import compute_optimal_coordinates
+from reaction_path_sampler.utils import get_tqdm_disable
+
+
+def get_reaction_graph_isomorphism(
+    rc_complex: Complex, pc_complex: Complex, n_workers: int, node_label: str = "atom_label"
+):
+    # plot_networkx_mol_graph(rc_complex.conformers[0].graph, rc_complex.conformers[0].coordinates)
+    # plot_networkx_mol_graph(pc_complex.conformers[0].graph, pc_complex.conformers[0].coordinates)
+
+    # get all isomorphisms based on bond rearrangement
+    t = time.time()
+    bond_rearr, reaction_isomorphisms, isomorphism_idx = get_reaction_isomorphisms(
+        rc_complex, pc_complex, node_label
+    )
+    print(f"Finding all possible graph isomorphisms took: {time.time() - t}")
+
+    # select best reaction isomorphism & remap reaction
+    t = time.time()
+    print(f"selecting ideal reaction isomorphism from {len(reaction_isomorphisms)} choices...")
+    isomorphism = select_ideal_isomorphism(
+        rc_conformers=rc_complex.conformers,
+        pc_conformers=pc_complex.conformers,
+        rc_species_complex_mapping=rc_complex.species_complex_mapping,
+        pc_species_complex_mapping=pc_complex.species_complex_mapping,
+        isomorphism_idx=isomorphism_idx,
+        isomorphisms=reaction_isomorphisms,
+        n_workers=n_workers,
+    )
+    print(f"\nSelecting best isomorphism took: {time.time() - t}")
+
+    return bond_rearr, isomorphism, isomorphism_idx
+
+
+# @timeout_decorator.timeout(15, use_signals=False)
+def get_reaction_isomorphisms(
+    rc_complex: ade.Species,
+    pc_complex: ade.Species,
+    node_label: str,
+) -> tuple[BondRearrangement, dict[int, int], int]:
+    """
+    This function returns all possible isomorphisms between the reactant & product graphs
+    """
+    for idx, reaction_complexes in enumerate(
+        [
+            [rc_complex, pc_complex],
+            [pc_complex, rc_complex],
+        ]
+    ):
+        bond_rearrs = get_bond_rearrangs(reaction_complexes[1], reaction_complexes[0], name="test")
+        if bond_rearrs is not None:
+            for bond_rearr in bond_rearrs:
+                print(bond_rearr)
+                graph1 = reaction_complexes[0].graph
+                graph2 = reac_graph_to_prod_graph(reaction_complexes[1].graph, bond_rearr)
+                mappings = []
+                for isomorphism in nx.vf2pp_all_isomorphisms(graph1, graph2, node_label=node_label):
+                    mappings.append(isomorphism)
+
+                mappings = [dict(s) for s in set(frozenset(d.items()) for d in mappings)]
+
+                if len(mappings) > 0:
+                    return bond_rearr, mappings, idx
+
+
+def compute_isomorphism_score(args) -> float:
+    isomorphism, species_complex_mapping, coords1, coords2 = args
+
+    # remap coords based on isomorphism
+    ordering = np.array(sorted(isomorphism, key=isomorphism.get))
+    coords2 = coords2[ordering, :]
+
+    # remap species mapping based on isomorphism
+    for key, value in species_complex_mapping.items():
+        species_complex_mapping[key] = np.array([isomorphism[idx] for idx in value])
+
+    rmsd = 0
+    for _, idxs in species_complex_mapping.items():
+        sub_system_rc_coords = coords1[idxs, :]
+        sub_system_pc_coords = coords2[idxs, :]
+        sub_system_rc_coords_aligned = compute_optimal_coordinates(
+            sub_system_rc_coords, sub_system_pc_coords
+        )
+        rmsd += np.sqrt(np.mean((sub_system_pc_coords - sub_system_rc_coords_aligned) ** 2))
+
+    return rmsd
+
+
+def select_ideal_isomorphism(
+    rc_conformers: list[Conformer],
+    pc_conformers: list[Conformer],
+    rc_species_complex_mapping: dict[int, list[int]],
+    pc_species_complex_mapping: dict[int, list[int]],
+    isomorphism_idx: int,
+    isomorphisms: list[dict[int, int]],
+    n_workers: int,
+) -> dict[int, int]:
+    """
+    This function select the "true" graph isomorpism based on some RMSD calculations between
+    product & reactant complex conformers
+    """
+
+    scores = []
+    if isomorphism_idx == 0:
+        coords_no_remap = pc_conformers[0].coordinates
+        coords_to_remap = rc_conformers[0].coordinates
+    elif isomorphism_idx == 1:
+        coords_no_remap = rc_conformers[0].coordinates
+        coords_to_remap = pc_conformers[0].coordinates
+    else:
+        raise ValueError(f"isomorphism idx can not be {isomorphism_idx}")
+
+    species_complex_mapping = [rc_species_complex_mapping, pc_species_complex_mapping][
+        isomorphism_idx
+    ]
+
+    args = [
+        (isomorphism, species_complex_mapping, coords_no_remap, coords_to_remap)
+        for isomorphism in isomorphisms
+    ]
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        scores = list(
+            tqdm(
+                executor.map(compute_isomorphism_score, args),
+                total=len(args),
+                desc="Computing isomorphisms score",
+                disable=get_tqdm_disable(),
+            )
+        )
+
+    return isomorphisms[np.argmin(scores)]
+
+
+"""
+New isomorphism selection code
+"""
+
+
+def compute_isomorphism_score_single(args) -> float:
+    isomorphism, coords1, coords2 = args
+
+    # remap coords based on isomorphism
+    ordering = np.array(sorted(isomorphism, key=isomorphism.get))
+    coords2 = coords2[ordering, :]
+
+    rc_coords = coords1
+    pc_coords = coords2
+    rc_coords_aligned = compute_optimal_coordinates(rc_coords, pc_coords)
+    score = np.sqrt(np.mean((pc_coords - rc_coords_aligned) ** 2))
+    return score
+
+
+def select_ideal_pair_isomorphism(
+    rc_conformer: list[Conformer],
+    pc_conformer: list[Conformer],
+    isomorphism_idx: int,
+    isomorphisms: list[dict[int, int]],
+    settings: Any,
+) -> dict[int, int]:
+    """
+    This function select the "true" graph isomorpism based on some RMSD calculations between
+    product & reactant complex conformers
+    """
+
+    scores = []
+    if isomorphism_idx == 0:
+        coords_no_remap = pc_conformer.coordinates
+        coords_to_remap = rc_conformer.coordinates
+    elif isomorphism_idx == 1:
+        coords_no_remap = rc_conformer.coordinates
+        coords_to_remap = pc_conformer.coordinates
+    else:
+        raise ValueError(f"isomorphism idx can not be {isomorphism_idx}")
+
+    args = [(isomorphism, coords_no_remap, coords_to_remap) for isomorphism in isomorphisms]
+    with ProcessPoolExecutor(
+        max_workers=int(settings["n_processes"] * settings["xtb_n_cores"])
+    ) as executor:
+        scores = list(
+            tqdm(
+                executor.map(compute_isomorphism_score_single, args),
+                total=len(args),
+                desc="Computing isomorphisms score",
+                disable=get_tqdm_disable(),
+            )
+        )
+
+    return isomorphisms[np.argmin(scores)]
